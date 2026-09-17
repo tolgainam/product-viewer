@@ -1,0 +1,52 @@
+# Cuts a release when a v* tag is pushed.
+#
+# The tarball is attached to the GitHub Release under two names: the versioned one
+# npm pack produces, and a stable product-viewer.tgz so that
+# /releases/latest/download/product-viewer.tgz keeps working across version bumps.
+#
+# Everything is verified before the tarball is published — including
+# verify:consumer, which builds a real consumer app twice (2D-only, then with 3D),
+# the one check that catches a broken optional-peer setup.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Consumer builds (2D-only, then 3D)
+        run: npm run verify:consumer
+
+      - name: Pack
+        run: |
+          mkdir -p release
+          npm pack --pack-destination release
+          cp release/tolgainam-product-viewer-*.tgz release/product-viewer.tgz
+          ls -la release
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/*.tgz --generate-notes --title "$GITHUB_REF_NAME"

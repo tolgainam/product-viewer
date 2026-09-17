@@ -1,0 +1,8 @@
+node_modules/
+dist/
+docs/dist/
+coverage/
+*.tgz
+.DS_Store
+.vite/
+*.local

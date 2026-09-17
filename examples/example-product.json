@@ -1,0 +1,123 @@
+{
+  "id": "example-product",
+  "hero": {
+    "name": "Aperture One",
+    "alt": "Aperture One",
+    "image": {
+      "small": "/media/devices/forest.webp",
+      "medium": "/media/devices/forest.webp",
+      "large": "/media/devices/forest.webp",
+      "alt": "Aperture One in Forest"
+    }
+  },
+  "variants": [
+    {
+      "id": "forest",
+      "label": "Forest",
+      "colorHex": "#2D5A4A",
+      "backgroundColor": "#1a2e28",
+      "image": {
+        "small": "/media/devices/forest.webp",
+        "medium": "/media/devices/forest.webp",
+        "large": "/media/devices/forest.webp",
+        "alt": "Aperture One in Forest"
+      }
+    },
+    {
+      "id": "glacier",
+      "label": "Glacier",
+      "colorHex": "#b4dfe0",
+      "backgroundColor": "#243642",
+      "image": {
+        "small": "/media/devices/glacier.webp",
+        "medium": "/media/devices/glacier.webp",
+        "large": "/media/devices/glacier.webp",
+        "alt": "Aperture One in Glacier"
+      }
+    },
+    {
+      "id": "ember",
+      "label": "Ember",
+      "colorHex": "#785165",
+      "backgroundColor": "#2e1a22",
+      "image": {
+        "small": "/media/devices/ember.webp",
+        "medium": "/media/devices/ember.webp",
+        "large": "/media/devices/ember.webp",
+        "alt": "Aperture One in Ember"
+      }
+    },
+    {
+      "id": "graphite",
+      "label": "Graphite",
+      "colorHex": "#7f8592",
+      "backgroundColor": "#1c1f21",
+      "image": {
+        "small": "/media/devices/graphite.webp",
+        "medium": "/media/devices/graphite.webp",
+        "large": "/media/devices/graphite.webp",
+        "alt": "Aperture One in Graphite"
+      }
+    }
+  ],
+  "features": [
+    {
+      "id": "optics",
+      "label": "Optics",
+      "title": "SIX-ELEMENT ASSEMBLY",
+      "description": "A six-element lens stack, aligned to within a few microns. This card shows an image background.",
+      "mediaType": "image",
+      "media": {
+        "small": "/media/features/optics.webp",
+        "medium": "/media/features/optics.webp",
+        "large": "/media/features/optics.webp",
+        "alt": "Concentric rings representing the lens assembly"
+      }
+    },
+    {
+      "id": "battery",
+      "label": "Battery",
+      "title": "THREE-DAY CELL",
+      "description": "Three days of typical use, or a full charge in forty minutes. This card shows a plain colour background — no asset required.",
+      "mediaType": "color",
+      "media": {
+        "color": "#1a2e28",
+        "alt": "Flat colour background"
+      }
+    },
+    {
+      "id": "motion",
+      "label": "Motion",
+      "title": "CONTINUOUS STABILISATION",
+      "description": "Movement is sampled a hundred times a second. This card shows a video background.",
+      "mediaType": "video",
+      "media": {
+        "src": "/media/video/motion.mp4",
+        "poster": {
+          "small": "/media/features/motion.webp",
+          "medium": "/media/features/motion.webp",
+          "large": "/media/features/motion.webp",
+          "alt": "Motion stabilisation"
+        }
+      }
+    },
+    {
+      "id": "materials",
+      "label": "Materials",
+      "title": "MACHINED UNIBODY",
+      "description": "A machined aluminium shell with an anodised matte finish. This card shows a 3D model; it falls back to the poster image when the optional three.js peers are not installed.",
+      "mediaType": "model",
+      "media": {
+        "src": "/example.glb",
+        "poster": {
+          "small": "/media/features/materials.webp",
+          "medium": "/media/features/materials.webp",
+          "large": "/media/features/materials.webp",
+          "alt": "Machined unibody"
+        },
+        "alt": "Aperture One 3D model"
+      },
+      "footnotes": ["Anodised aluminium shell", "Scratch-resistant coating"]
+    }
+  ]
+}

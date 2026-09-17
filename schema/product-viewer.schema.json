@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tolgainam/genUI/packages/product-viewer/schema/product-viewer.schema.json",
+  "title": "ProductViewer content",
+  "description": "Content for one product rendered by @tolgainam/product-viewer. Author: Tolga Inam <tolgainam@gmail.com>. Licence: MIT.",
+  "type": "object",
+  "required": ["hero", "variants", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Optional identifier, rendered as data-product-id."
+    },
+    "hero": { "$ref": "#/$defs/hero" },
+    "variants": {
+      "type": "array",
+      "description": "Selectable colour variants. May be empty.",
+      "items": { "$ref": "#/$defs/variant" }
+    },
+    "features": {
+      "type": "array",
+      "description": "Expandable feature cards. May be empty.",
+      "items": { "$ref": "#/$defs/feature" }
+    }
+  },
+  "$defs": {
+    "responsiveImage": {
+      "type": "object",
+      "description": "One image at three widths, plus optional retina sources.",
+      "required": ["small", "medium", "large", "alt"],
+      "additionalProperties": false,
+      "properties": {
+        "small": { "type": "string", "description": "URL used on narrow viewports." },
+        "medium": { "type": "string", "description": "URL used on medium viewports." },
+        "large": { "type": "string", "description": "URL used on wide viewports." },
+        "small2x": { "type": "string" },
+        "medium2x": { "type": "string" },
+        "large2x": { "type": "string" },
+        "alt": { "type": "string", "description": "Alternative text." }
+      }
+    },
+    "responsiveVideo": {
+      "type": "object",
+      "required": ["src", "poster"],
+      "additionalProperties": false,
+      "properties": {
+        "src": { "type": "string", "description": "Video file URL." },
+        "poster": { "$ref": "#/$defs/responsiveImage" },
+        "startFrame": { "type": "string", "description": "Optional still shown before playback." },
+        "endFrame": { "type": "string", "description": "Optional still shown after playback." }
+      }
+    },
+    "colorBackground": {
+      "type": "object",
+      "description": "A flat colour instead of media; the container itself carries the colour.",
+      "required": ["color"],
+      "additionalProperties": false,
+      "properties": {
+        "color": { "type": "string", "description": "Any CSS colour, e.g. #1a2e28" },
+        "alt": { "type": "string" }
+      }
+    },
+    "modelBackground": {
+      "type": "object",
+      "description": "A 3D model (GLB/GLTF). Needs the optional peers three, @react-three/fiber and @react-three/drei; without them the poster is shown.",
+      "required": ["src"],
+      "additionalProperties": false,
+      "properties": {
+        "src": { "type": "string", "description": "URL of the .glb / .gltf file." },
+        "poster": { "$ref": "#/$defs/responsiveImage" },
+        "background": {
+          "type": "string",
+          "description": "Backdrop behind the model; defaults to a dark grey."
+        },
+        "alt": { "type": "string" }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "required": ["name", "image", "alt"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "description": "Product name shown in the viewer." },
+        "image": { "$ref": "#/$defs/responsiveImage" },
+        "video": { "$ref": "#/$defs/responsiveVideo" },
+        "alt": { "type": "string" }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "required": ["id", "label", "colorHex", "image"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string", "description": "Colour name shown next to the swatch." },
+        "colorHex": {
+          "type": "string",
+          "description": "Swatch colour.",
+          "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+        },
+        "image": { "$ref": "#/$defs/responsiveImage" },
+        "ariaLabel": { "type": "string" },
+        "backgroundColor": {
+          "type": "string",
+          "description": "Stage colour while this variant is selected; needs dynamicBackground in visualConfig."
+        }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "required": ["id", "label", "description", "mediaType", "media"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string", "description": "Short text on the pill and heading of the expanded card." },
+        "title": {
+          "type": "string",
+          "description": "Optional longer headline. Carried with the content but not displayed by the current layouts."
+        },
+        "description": { "type": "string" },
+        "mediaType": { "enum": ["image", "video", "color", "model"] },
+        "media": {
+          "oneOf": [
+            { "$ref": "#/$defs/responsiveImage" },
+            { "$ref": "#/$defs/responsiveVideo" },
+            { "$ref": "#/$defs/colorBackground" },
+            { "$ref": "#/$defs/modelBackground" }
+          ],
+          "description": "Match mediaType: image → responsiveImage, video → responsiveVideo, color → colorBackground, model → modelBackground."
+        },
+        "footnotes": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
