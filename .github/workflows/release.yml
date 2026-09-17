@@ -58,7 +58,13 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/*.tgz --generate-notes --title "$GITHUB_REF_NAME"
+        # Re-runnable: a release that already exists gets its assets refreshed instead of failing
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release/*.tgz --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release/*.tgz --generate-notes --title "$GITHUB_REF_NAME"
+          fi
 
       # Trusted publishing needs npm 11.5+; Node 22 ships an older npm.
       - name: Update npm for trusted publishing
