@@ -29,11 +29,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No registry-url here: it would write a placeholder token into .npmrc that shadows
+      # the OIDC login trusted publishing relies on
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-          registry-url: https://registry.npmjs.org
 
       - run: npm ci
 
@@ -76,5 +77,6 @@ jobs:
           if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
             echo "$NAME@$VERSION is already on npm, skipping"
           else
-            npm publish release/product-viewer.tgz --provenance --access public
+            # Explicit ./ path: without it npm reads "release/product-viewer.tgz" as a GitHub shorthand
+            npm publish ./release/product-viewer.tgz --provenance --access public
           fi
