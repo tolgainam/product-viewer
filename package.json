@@ -1,6 +1,6 @@
 {
   "name": "@tolgainam/product-viewer",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Apple-style product viewer React component with expandable feature cards, colour variants and media galleries. Renders from a JSON content file. No UI framework dependency.",
   "author": "Tolga Inam <tolgainam@gmail.com>",
   "license": "MIT",
