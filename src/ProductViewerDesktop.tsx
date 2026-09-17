@@ -1,365 +1,187 @@
 /**
  * ProductViewerDesktop Component
  *
- * Desktop layout for ProductViewer with floating pills on left side.
+ * Desktop layout for ProductViewer with floating pills on the left side.
  * Features:
  * - Floating pills over the media area (hug content)
  * - Vertical chevrons (always have reserved space) + pills stack on left
  * - Pills expand: header stays visible, content grows below
  * - Two-stage animation: size grows first, then content fades in
  * - Global close button when expanded
- * - Slider animation for image transitions
+ * - Load-gated crossfade for stage images
+ *
+ * Each pill is a real `<button>` header with `aria-expanded`, followed by a region for
+ * the card content, so it reads as a disclosure to assistive tech and never nests
+ * interactive elements.
  *
  * @author Tolga Inam <tolgainam@gmail.com>
  * @license MIT
  */
 
-import { forwardRef, useRef, useState, useEffect } from 'react'
-import { Box, IconButton } from '@mui/material'
-import { motion, AnimatePresence } from 'framer-motion'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import { forwardRef, useId, type CSSProperties } from 'react'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
+import { ChevronUp, ChevronDown } from 'lucide-react'
 import { Text } from './internal/Text'
 import { ColorSelector } from './internal/ColorSelector'
 import { getGlassEffectSx } from './internal/glass-effects'
-import type { ProductViewerColor, ProductViewerModel, ModelRenderer } from './ProductViewer.types'
-import { borderRadius as br, containerPageWidth, getSpacingPx } from './internal/tokens'
-import type {
-  ProductViewerVariant,
-  ProductViewerFeature,
-  ProductViewerHero,
-  ResponsiveImage,
-  ResponsiveVideo,
-  ProductViewerVisualConfig,
-} from './ProductViewer.types'
-
-interface ProductViewerDesktopProps {
-  hero: ProductViewerHero
-  variants: ProductViewerVariant[]
-  features: ProductViewerFeature[]
-  selectedVariantId: string
-  expandedFeatureIndex: number
-  onVariantChange: (variantId: string) => void
-  onFeatureToggle: (index: number) => void
-  onClose: () => void
-  visualConfig: ProductViewerVisualConfig
-  /** Supplied by the host app from '@tolgainam/product-viewer/model'; absent means no 3D */
-  modelRenderer?: ModelRenderer
-}
-
-// Type guard for video
-function isResponsiveVideo(
-  media: ResponsiveImage | ResponsiveVideo | ProductViewerColor | ProductViewerModel
-): media is ResponsiveVideo {
-  return 'src' in media && 'poster' in media
-}
+import { StageImage, type StageCustom } from './internal/StageImage'
+import { StageVideo } from './internal/StageVideo'
+import { formatLabel, stageBackgroundFor, stageMediaFor } from './internal/media'
+import { cx, useViewerStyles } from './internal/styles'
+import { stateColors, type ProductViewerLayoutProps } from './internal/viewer-items'
+import { borderRadius as br, spacing } from './internal/tokens'
 
 /**
  * Animation Configuration - Desktop
  * Centralized settings for all animations in ProductViewerDesktop
  */
 const DESKTOP_ANIMATIONS = {
-  // Background image crossfade
-  backgroundImage: {
-    duration: 0.4, // seconds
-    ease: 'easeInOut',
-  },
-
+  // Stage crossfade: same curve as the card, a beat behind
+  backgroundImage: { duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 },
   // Pill hover/interaction
-  pill: {
-    duration: 0.2, // seconds
-    ease: 'ease',
-  },
-
-  // Icon background color transitions
-  iconBackground: {
-    duration: 0.3, // seconds
-    ease: 'ease',
-  },
-
-  // Icon color transitions
-  iconColor: {
-    duration: 0.3, // seconds
-    ease: 'ease',
-  },
-
+  pill: { duration: 0.2, ease: 'ease' },
+  // Icon background/colour transitions
+  icon: { duration: 0.3, ease: 'ease' },
   // Expanded card transitions
-  expandedCard: {
-    duration: 0.3, // seconds
-    ease: 'ease',
-  },
-
+  expandedCard: { duration: 0.3, ease: 'ease' },
   // Card content expansion (height animation)
-  cardContent: {
-    duration: 0.4, // seconds
-    ease: [0.4, 0, 0.2, 1],
-  },
-
-  // Card text fade in
-  cardText: {
-    duration: 0.25, // seconds
-    delay: 0.35, // seconds - fades in after content grows
-  },
-
+  cardContent: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
+  // Card text fade in — after the content has grown
+  cardText: { duration: 0.25, delay: 0.35 },
   // Close button
-  closeButton: {
-    duration: 0.2, // seconds
-  },
-
+  closeButton: { duration: 0.2 },
   // Container background color
-  backgroundColor: {
-    duration: '0.5s', // CSS transition
-    ease: 'ease',
-  },
+  backgroundColor: { duration: '0.5s', ease: 'ease' },
 } as const
 
-export const ProductViewerDesktop = forwardRef<HTMLDivElement, ProductViewerDesktopProps>(
+const STAGE_VARIANTS: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: DESKTOP_ANIMATIONS.backgroundImage },
+  exit: ({ transition }: StageCustom) => ({
+    opacity: 0,
+    // A 3D canvas is taking over: leave at once rather than showing through its first frame
+    transition:
+      transition === 'clear'
+        ? { duration: 0 }
+        : { ...DESKTOP_ANIMATIONS.backgroundImage, duration: DESKTOP_ANIMATIONS.backgroundImage.duration / 2 },
+  }),
+}
+
+/** Widest the stage grows; centred with side gutters beyond that */
+const STAGE_MAX_WIDTH = 1408
+
+const headerButtonStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  height: 24,
+  boxSizing: 'content-box',
+  padding: '12px 20px',
+  whiteSpace: 'nowrap',
+}
+
+const fill: CSSProperties = { position: 'absolute', inset: 0 }
+
+export const ProductViewerDesktop = forwardRef<HTMLDivElement, ProductViewerLayoutProps>(
   (
     {
       hero,
       variants,
       features,
+      items,
       selectedVariantId,
       expandedFeatureIndex,
+      activeItemIndex,
+      canGoPrevious,
+      canGoNext,
       onVariantChange,
       onFeatureToggle,
+      onPrevious,
+      onNext,
       onClose,
       visualConfig,
+      labels,
       modelRenderer,
     },
     ref
   ) => {
+    useViewerStyles()
+    const idPrefix = useId()
+    const selectedVariant = variants.find((v) => v.id === selectedVariantId)
+    const expandedFeature = expandedFeatureIndex >= 0 ? (features[expandedFeatureIndex] ?? null) : null
+    const hasActiveItem = activeItemIndex >= 0
+
+    const stageMedia = stageMediaFor({ hero, selectedVariant, expandedFeature, hasModelRenderer: !!modelRenderer })
+    const containerBackgroundColor = stageBackgroundFor(visualConfig, selectedVariant, expandedFeature)
+
+    const pillColors = stateColors(visualConfig.pill.backgroundColor, ['default', 'hover', 'active'])
+    const closeColors = stateColors(visualConfig.closeButton.backgroundColor, ['default', 'hover'])
+    const pillRadius = typeof visualConfig.pill.borderRadius === 'number' ? visualConfig.pill.borderRadius : 24
+    // Every open card is the same width, whatever its content: a short colour caption
+    // must not make the colour card narrower than the feature cards
+    const cardContentWidth = visualConfig.expandedCard.maxWidth || 280
+    const {
+      expandIcon: ExpandIcon,
+      closeIcon: CloseIcon,
+      chevronUpIcon: PreviousIcon = ChevronUp,
+      chevronDownIcon: NextIcon = ChevronDown,
+    } = visualConfig.pill.icons
+
+    // Capitalised binding so JSX treats the injected renderer as a component
+    const ModelRendererComponent = modelRenderer
+
     // Chevron button styles - full circles (using pill colors)
-    const chevronStyles = {
-      ...getGlassEffectSx({
-        type: visualConfig.pill.glassEffect,
-        intensity: visualConfig.pill.glassIntensity,
-      }),
+    const chevronStyle = (enabled: boolean): CSSProperties => ({
+      ...getGlassEffectSx({ type: visualConfig.pill.glassEffect, intensity: visualConfig.pill.glassIntensity }),
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       width: 40,
       height: 40,
       borderRadius: '50%',
-      border: 'none',
-      backgroundColor: typeof visualConfig.pill.backgroundColor === 'string'
-        ? visualConfig.pill.backgroundColor
-        : visualConfig.pill.backgroundColor.default,
+      backgroundColor: pillColors.default,
       color: visualConfig.pill.textColor,
-      cursor: 'pointer',
       transition: `all ${DESKTOP_ANIMATIONS.pill.duration}s ${DESKTOP_ANIMATIONS.pill.ease}`,
-      '&:hover:not(:disabled)': {
-        backgroundColor: typeof visualConfig.pill.backgroundColor === 'string'
-          ? visualConfig.pill.backgroundColor
-          : visualConfig.pill.backgroundColor.hover,
-      },
-      '&:disabled': {
-        opacity: 0.3,
-        cursor: 'not-allowed',
-      },
-    }
-
-    const [shouldAnimateImage, setShouldAnimateImage] = useState(true)
-    const prevVariantIdRef = useRef(selectedVariantId)
-
-    const selectedVariant = variants.find((v) => v.id === selectedVariantId)
-    const expandedFeature = expandedFeatureIndex >= 0 ? features[expandedFeatureIndex] : null
-    const isExpanded = expandedFeatureIndex >= 0
-    const isColorSelectorActive = expandedFeatureIndex === -2
-    const hasActiveItem = isExpanded || isColorSelectorActive
-
-    // Detect color-only changes to use crossfade instead of slide
-    useEffect(() => {
-      if (prevVariantIdRef.current !== selectedVariantId) {
-        // Color changed - use crossfade animation
-        setShouldAnimateImage(true)
-        prevVariantIdRef.current = selectedVariantId
-      }
-    }, [selectedVariantId])
-
-    // Get current background image
-    const getCurrentBackgroundImage = () => {
-      if (expandedFeature) {
-        // Colour features recolour the stage but keep the product on it
-        if (expandedFeature.mediaType === 'color') {
-          return selectedVariant?.image.large || hero.image.large || ''
-        }
-        // A model paints its own canvas, so no poster layer — it would flash before the canvas
-        // mounts. With no renderer supplied there is no canvas, so the poster becomes the background.
-        if (expandedFeature.mediaType === 'model') {
-          return modelRenderer ? '' : ((expandedFeature.media as ProductViewerModel).poster?.large ?? '')
-        }
-        // Use type guard to detect video (not mediaType field which may be incorrect)
-        if (isResponsiveVideo(expandedFeature.media)) {
-          return expandedFeature.media.poster.large
-        }
-        return (expandedFeature.media as ResponsiveImage).large
-      }
-      if (selectedVariant && selectedVariant.image.large) {
-        return selectedVariant.image.large
-      }
-      return hero.image.large || ''
-    }
-
-    const imageKey = getCurrentBackgroundImage()
-
-    // Log missing images for debugging (no bundler-specific env flag, so this works anywhere).
-    // Colour features legitimately have no image, and a model draws its own canvas instead.
-    if (
-      !imageKey &&
-      expandedFeature?.mediaType !== 'color' &&
-      expandedFeature?.mediaType !== 'model'
-    ) {
-      console.warn('[ProductViewer] Missing background image:', {
-        selectedVariantId,
-        selectedVariant,
-        expandedFeature,
-        hero
-      })
-    }
-
-    // Determine background size: contain for color picker variants, cover for everything else
-    const isVariantImage = variants.some(v => v.image.large === imageKey)
-    const backgroundSize = isVariantImage ? 'contain' : 'cover'
-
-    // Determine container background color (dynamic based on selected variant if enabled)
-    const getContainerBackgroundColor = () => {
-      // A colour feature IS the background
-      if (expandedFeature?.mediaType === 'color') {
-        return (expandedFeature.media as ProductViewerColor).color
-      }
-      // If dynamic background is enabled and a variant is selected (no feature expanded)
-      if (visualConfig.container.dynamicBackground && selectedVariant && !expandedFeature) {
-        return selectedVariant.backgroundColor || visualConfig.container.backgroundColor
-      }
-      return visualConfig.container.backgroundColor
-    }
-
-    const containerBackgroundColor = getContainerBackgroundColor()
-
-    // Capitalised binding so JSX treats the injected renderer as a component
-    const ModelRendererComponent = modelRenderer
-
-    // All items (color selector + features) - colors is index -2, features are 0+
-    const allItems = [
-      ...(variants.length > 1 ? [{ type: 'color' as const, id: 'colors', index: -2 }] : []),
-      ...features.map((f, i) => ({ type: 'feature' as const, id: f.id, index: i, feature: f })),
-    ]
-
-    // Calculate navigation - treat all items the same
-    const activeItemArrayIndex = allItems.findIndex(item =>
-      item.type === 'color' ? isColorSelectorActive : expandedFeatureIndex === item.index
-    )
-    const canGoPrevious = activeItemArrayIndex > 0
-    const canGoNext = activeItemArrayIndex >= 0 && activeItemArrayIndex < allItems.length - 1
-
-    // Handle navigation with direction tracking
-    const handlePrevious = () => {
-      if (activeItemArrayIndex > 0) {
-        setShouldAnimateImage(true)
-        const prevItem = allItems[activeItemArrayIndex - 1]
-        onFeatureToggle(prevItem.index)
-      }
-    }
-
-    const handleNext = () => {
-      if (activeItemArrayIndex < allItems.length - 1) {
-        setShouldAnimateImage(true)
-        const nextItem = allItems[activeItemArrayIndex + 1]
-        onFeatureToggle(nextItem.index)
-      }
-    }
+      opacity: !hasActiveItem ? 0 : enabled ? 1 : 0.3,
+      pointerEvents: hasActiveItem ? 'auto' : 'none',
+      ['--pv-hover' as string]: pillColors.hover,
+    })
 
     return (
-      <Box
+      <div
         ref={ref}
-        sx={{
+        style={{
           position: 'relative',
-          maxWidth: containerPageWidth.large,
-          mx: 'auto',
+          maxWidth: STAGE_MAX_WIDTH,
+          margin: '0 auto',
           aspectRatio: '16 / 9',
           minHeight: 500,
-          borderRadius: `${br[3]}px`,
+          borderRadius: br[3],
           overflow: 'hidden',
           backgroundColor: containerBackgroundColor,
           transition: `background-color ${DESKTOP_ANIMATIONS.backgroundColor.duration} ${DESKTOP_ANIMATIONS.backgroundColor.ease}`,
         }}
       >
-        {/* Background Image with Crossfade Animation */}
-        {imageKey && shouldAnimateImage ? (
-          // No mode="wait": that holds the incoming image back until the outgoing one
-          // finishes exiting, and the exit never completes here, so switching category
-          // left the previous media on screen. Overlapping layers give the intended crossfade.
-          <AnimatePresence>
-            <motion.div
-              key={imageKey}
-              // Concrete values, not variant labels: the viewer's outer motion.div animates
-              // labels ("hidden"/"visible") and propagates them to children, which left this
-              // layer resolving no matching variant and stuck at opacity 0.
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: DESKTOP_ANIMATIONS.backgroundImage.duration, ease: DESKTOP_ANIMATIONS.backgroundImage.ease }}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: `url("${imageKey}")`,
-                backgroundSize,
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            />
-          </AnimatePresence>
-        ) : imageKey ? (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url("${imageKey}")`,
-              backgroundSize,
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-          />
-        ) : null}
+        {/* Stage picture, crossfading once the next image has loaded */}
+        <StageImage media={stageMedia} expanded={hasActiveItem} variants={STAGE_VARIANTS} />
 
         {/* Video player for video features */}
-        {expandedFeature?.mediaType === 'video' && isResponsiveVideo(expandedFeature.media) && (
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1,
-            }}
-          >
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
-            >
-              <source src={expandedFeature.media.src} type="video/mp4" />
-            </video>
-          </Box>
+        {expandedFeature?.mediaType === 'video' && (
+          <div style={{ ...fill, zIndex: 1 }}>
+            <StageVideo video={expandedFeature.media} />
+          </div>
         )}
 
         {/* 3D model for model features — three.js loads only when this mounts */}
         {expandedFeature?.mediaType === 'model' && ModelRendererComponent && (
-          <Box sx={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+          <div style={{ ...fill, zIndex: 1 }}>
             <ModelRendererComponent
-              src={(expandedFeature.media as ProductViewerModel).src}
-              poster={(expandedFeature.media as ProductViewerModel).poster?.large}
-              background={(expandedFeature.media as ProductViewerModel).background}
+              key={expandedFeature.media.src}
+              src={expandedFeature.media.src}
+              poster={expandedFeature.media.poster?.large}
+              background={expandedFeature.media.background}
             />
-          </Box>
+          </div>
         )}
 
         {/* Global Close Button */}
@@ -370,328 +192,228 @@ export const ProductViewerDesktop = forwardRef<HTMLDivElement, ProductViewerDesk
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: DESKTOP_ANIMATIONS.closeButton.duration }}
-              style={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                zIndex: 10,
-              }}
+              style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}
             >
-              <IconButton
+              <button
+                type="button"
+                className={cx('pv-reset', 'pv-btn', 'pv-hover')}
                 onClick={onClose}
-                sx={{
-                  ...getGlassEffectSx({
-                    type: visualConfig.closeButton.glassEffect,
-                  }),
-                  backgroundColor: typeof visualConfig.closeButton.backgroundColor === 'string'
-                    ? visualConfig.closeButton.backgroundColor
-                    : visualConfig.closeButton.backgroundColor.default,
+                aria-label={labels.close}
+                style={{
+                  ...getGlassEffectSx({ type: visualConfig.closeButton.glassEffect }),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  backgroundColor: closeColors.default,
                   color: visualConfig.closeButton.iconColor,
-                  '&:hover': {
-                    backgroundColor: typeof visualConfig.closeButton.backgroundColor === 'string'
-                      ? visualConfig.closeButton.backgroundColor
-                      : visualConfig.closeButton.backgroundColor.hover,
-                  },
+                  transition: `background-color ${DESKTOP_ANIMATIONS.pill.duration}s ${DESKTOP_ANIMATIONS.pill.ease}`,
+                  ['--pv-hover' as string]: closeColors.hover,
                 }}
               >
-                {(() => {
-                  const CloseIconComponent = visualConfig.pill.icons.closeIcon
-                  return <CloseIconComponent />
-                })()}
-              </IconButton>
+                <CloseIcon size={20} aria-hidden />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Left Panel: Chevrons + Pills (floating) */}
-        <Box
-          sx={{
+        <div
+          style={{
             position: 'absolute',
             top: 0,
             left: 0,
             bottom: 0,
             display: 'flex',
             alignItems: 'center',
-            gap: getSpacingPx(3),
-            padding: getSpacingPx(4),
+            gap: spacing[3],
+            padding: spacing[4],
             zIndex: 5,
           }}
         >
           {/* Vertical Chevrons - Always reserve space */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: getSpacingPx(2),
-              width: 40, // Fixed width to reserve space
-            }}
-          >
-            <Box
-              component="button"
-              onClick={handlePrevious}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing[2], width: 40 }}>
+            <button
+              type="button"
+              className={cx('pv-reset', 'pv-btn', 'pv-hover')}
+              onClick={onPrevious}
               disabled={!canGoPrevious}
-              sx={{
-                ...chevronStyles,
-                opacity: hasActiveItem ? 1 : 0,
-                pointerEvents: hasActiveItem ? 'auto' : 'none',
-              }}
+              aria-label={labels.previous}
+              aria-hidden={!hasActiveItem}
+              tabIndex={hasActiveItem ? 0 : -1}
+              style={chevronStyle(canGoPrevious)}
             >
-              <KeyboardArrowUpIcon />
-            </Box>
-            <Box
-              component="button"
-              onClick={handleNext}
+              <PreviousIcon size={20} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={cx('pv-reset', 'pv-btn', 'pv-hover')}
+              onClick={onNext}
               disabled={!canGoNext}
-              sx={{
-                ...chevronStyles,
-                opacity: hasActiveItem ? 1 : 0,
-                pointerEvents: hasActiveItem ? 'auto' : 'none',
-              }}
+              aria-label={labels.next}
+              aria-hidden={!hasActiveItem}
+              tabIndex={hasActiveItem ? 0 : -1}
+              style={chevronStyle(canGoNext)}
             >
-              <KeyboardArrowDownIcon />
-            </Box>
-          </Box>
+              <NextIcon size={20} aria-hidden />
+            </button>
+          </div>
 
           {/* Vertical Pills Stack */}
-          <Box
-            sx={{
+          <div
+            className="pv-scroll"
+            style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: getSpacingPx(2),
+              gap: spacing[2],
               maxWidth: visualConfig.pill.maxWidth || 340,
               maxHeight: '80%',
               overflowY: 'auto',
-              '&::-webkit-scrollbar': { width: 4 },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: 2,
-              },
             }}
           >
-            {allItems.map((item) => {
-              const isActive = item.type === 'color'
-                ? isColorSelectorActive
-                : expandedFeatureIndex === item.index
+            {items.map((item, position) => {
+              const isActive = position === activeItemIndex
+              const contentId = `${idPrefix}-${item.id}`
+              const label = item.type === 'color' ? labels.color : item.feature.label
+              const textColor = isActive ? visualConfig.expandedCard.textColor : visualConfig.pill.textColor
 
               return (
                 <div
                   key={item.id}
-                  style={{ width: 'fit-content' }}
+                  style={{
+                    ...getGlassEffectSx({
+                      type: isActive ? visualConfig.expandedCard.glassEffect : visualConfig.pill.glassEffect,
+                      intensity: isActive ? visualConfig.expandedCard.glassIntensity : visualConfig.pill.glassIntensity,
+                    }),
+                    display: 'inline-flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    width: 'fit-content',
+                    borderRadius: pillRadius,
+                    backgroundColor: isActive ? pillColors.active : pillColors.default,
+                    color: textColor,
+                    overflow: 'hidden',
+                    transition: `background-color ${DESKTOP_ANIMATIONS.expandedCard.duration}s ${DESKTOP_ANIMATIONS.expandedCard.ease}`,
+                  }}
                 >
-                  <div
-                    role="button"
-                    tabIndex={isActive ? -1 : 0}
-                    onClick={() => {
-                      if (!isActive) {
-                        setShouldAnimateImage(true)
-                        onFeatureToggle(item.index)
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (!isActive && (e.key === 'Enter' || e.key === ' ')) {
-                        e.preventDefault()
-                        setShouldAnimateImage(true)
-                        onFeatureToggle(item.index)
-                      }
-                    }}
-                    style={{
-                      ...getGlassEffectSx({
-                        type: isActive ? visualConfig.expandedCard.glassEffect : visualConfig.pill.glassEffect,
-                        intensity: isActive ? visualConfig.expandedCard.glassIntensity : visualConfig.pill.glassIntensity,
-                      }),
-                      display: 'inline-flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      padding: '12px 20px',
-                      borderRadius: typeof visualConfig.pill.borderRadius === 'number' ? visualConfig.pill.borderRadius : 24,
-                      border: 'none',
-                      backgroundColor: (() => {
-                        const bgConfig = typeof visualConfig.pill.backgroundColor === 'string'
-                          ? { default: visualConfig.pill.backgroundColor, active: visualConfig.pill.backgroundColor }
-                          : visualConfig.pill.backgroundColor
-                        return isActive ? bgConfig.active : bgConfig.default
-                      })(),
-                      color: isActive ? visualConfig.expandedCard.textColor : visualConfig.pill.textColor,
-                      cursor: isActive ? 'default' : 'pointer',
-                      textAlign: 'left',
-                      overflow: 'hidden',
-                      transition: `background-color ${DESKTOP_ANIMATIONS.expandedCard.duration}s ${DESKTOP_ANIMATIONS.expandedCard.ease}`,
-                    }}
+                  {/* Header - always visible; toggles the card */}
+                  <button
+                    type="button"
+                    className={cx('pv-reset', 'pv-btn')}
+                    aria-expanded={isActive}
+                    aria-controls={contentId}
+                    onClick={() => onFeatureToggle(item.index)}
+                    style={headerButtonStyle}
                   >
-                    {item.type === 'feature' ? (
-                      /* FEATURE PILLS: Header always visible, content expands below */
-                      <>
-                        {/* Header - always visible */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            height: 24,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              backgroundColor: visualConfig.expandedCard.backgroundColor,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              transition: `background-color ${DESKTOP_ANIMATIONS.iconBackground.duration}s ${DESKTOP_ANIMATIONS.iconBackground.ease}`,
-                            }}
-                          >
-                            {(() => {
-                              const IconComponent = isActive ? visualConfig.pill.icons.closeIcon : visualConfig.pill.icons.expandIcon
-                              return (
-                                <IconComponent
-                                  sx={{
-                                    fontSize: 14,
-                                    color: visualConfig.expandedCard.textColor,
-                                    transition: `color ${DESKTOP_ANIMATIONS.iconColor.duration}s ${DESKTOP_ANIMATIONS.iconColor.ease}`,
-                                  }}
-                                />
-                              )
-                            })()}
-                          </Box>
-                          <Text
-                            variant="body2"
-                            text={item.feature?.label || ''}
-                            sx={{
-                              color: isActive ? visualConfig.expandedCard.textColor : visualConfig.pill.textColor,
-                              fontWeight: 500,
-                              lineHeight: '24px',
-                              margin: 0,
-                              textTransform: 'none',
-                              whiteSpace: 'nowrap',
-                            }}
-                          />
-                        </div>
-
-                        {/* Content - grows first (0.4s), then text fades in (0.35s delay) */}
-                        <AnimatePresence>
-                          {isActive && (
-                            <motion.div
-                              key={`content-${item.id}`}
-                              initial={{ height: 0, width: 0, marginTop: 0 }}
-                              animate={{ height: 'auto', width: 'auto', marginTop: 12 }}
-                              exit={{ height: 0, width: 0, marginTop: 0 }}
-                              transition={{ duration: DESKTOP_ANIMATIONS.cardContent.duration, ease: DESKTOP_ANIMATIONS.cardContent.ease }}
-                              style={{ overflow: 'hidden' }}
-                            >
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: DESKTOP_ANIMATIONS.cardText.duration, delay: DESKTOP_ANIMATIONS.cardText.delay }}
-                              >
-                                <Text
-                                  variant="body2"
-                                  text={item.feature?.description || ''}
-                                  sx={{
-                                    color: visualConfig.expandedCard.textColor,
-                                    opacity: visualConfig.expandedCard.descriptionOpacity,
-                                    lineHeight: 1.5,
-                                    maxWidth: visualConfig.expandedCard.maxWidth || 280,
-                                  }}
-                                />
-                              </motion.div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </>
+                    {item.type === 'color' ? (
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: selectedVariant?.colorHex,
+                          border: '2px solid rgba(255, 255, 255, 0.4)',
+                          boxSizing: 'border-box',
+                          flexShrink: 0,
+                          transition: `background-color ${DESKTOP_ANIMATIONS.icon.duration}s ${DESKTOP_ANIMATIONS.icon.ease}`,
+                        }}
+                      />
                     ) : (
-                      /* COLOR PILLS: Header stays, content expands below */
-                      <>
-                        {/* Header - shows "Color" or selected color name when active */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            height: 24,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              backgroundColor: selectedVariant?.colorHex,
-                              border: '2px solid rgba(255, 255, 255, 0.4)',
-                              flexShrink: 0,
-                            }}
-                          />
-                          <Text
-                            variant="body2"
-                            // Lets keep title as Color always
-                            text={'Color'}
-                            // text={isActive ? (selectedVariant?.label || 'Color') : 'Color'}
-                            sx={{
-                              color: isActive ? visualConfig.expandedCard.textColor : visualConfig.pill.textColor,
-                              fontWeight: 500,
-                              lineHeight: '24px',
-                              margin: 0,
-                              textTransform: 'none',
-                            }}
-                          />
-                        </div>
-
-                        {/* Color Selector Content - expands below header */}
-                        <AnimatePresence>
-                          {isActive && (
-                            <motion.div
-                              key="color-content"
-                              initial={{ height: 0, width: 0, marginTop: 0 }}
-                              animate={{ height: 'auto', width: 'auto', marginTop: 12 }}
-                              exit={{ height: 0, width: 0, marginTop: 0 }}
-                              transition={{ duration: DESKTOP_ANIMATIONS.cardContent.duration, ease: DESKTOP_ANIMATIONS.cardContent.ease }}
-                              style={{ overflow: 'hidden' }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: DESKTOP_ANIMATIONS.cardText.duration, delay: DESKTOP_ANIMATIONS.cardText.delay }}
-                              >
-                                <Text
-                                  variant="body2"
-                                  text={`${hero.name} displayed in ${selectedVariant?.label || ''}`}
-                                  sx={{
-                                    color: visualConfig.expandedCard.textColor,
-                                    opacity: visualConfig.expandedCard.descriptionOpacity,
-                                    lineHeight: 1.5,
-                                    marginBottom: '12px',
-                                  }}
-                                />
-                                <ColorSelector
-                                  hideLabel
-                                  colors={variants.map((v) => ({
-                                    id: v.id,
-                                    name: v.label,
-                                    value: v.colorHex,
-                                  }))}
-                                  selectedColorId={selectedVariantId}
-                                  onColorChange={onVariantChange}
-                                  maxVisible={100}
-                                />
-                              </motion.div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </>
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: visualConfig.expandedCard.backgroundColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          color: visualConfig.expandedCard.textColor,
+                          transition: `background-color ${DESKTOP_ANIMATIONS.icon.duration}s ${DESKTOP_ANIMATIONS.icon.ease}`,
+                        }}
+                      >
+                        {isActive ? <CloseIcon size={14} aria-hidden /> : <ExpandIcon size={14} aria-hidden />}
+                      </span>
                     )}
-                  </div>
+                    <Text
+                      variant="body2"
+                      component="span"
+                      text={label}
+                      style={{ color: textColor, fontWeight: 500, lineHeight: '24px' }}
+                    />
+                  </button>
+
+                  {/* Content - grows first (0.4s), then text fades in (0.35s delay) */}
+                  <AnimatePresence initial={false}>
+                    {isActive && (
+                      <motion.div
+                        key={contentId}
+                        id={contentId}
+                        role="region"
+                        aria-label={label}
+                        initial={{ height: 0, width: 0 }}
+                        animate={{ height: 'auto', width: 'auto' }}
+                        exit={{ height: 0, width: 0 }}
+                        transition={{ duration: DESKTOP_ANIMATIONS.cardContent.duration, ease: DESKTOP_ANIMATIONS.cardContent.ease }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: DESKTOP_ANIMATIONS.cardText.duration, delay: DESKTOP_ANIMATIONS.cardText.delay }}
+                          style={{ width: cardContentWidth, boxSizing: 'content-box', padding: '0 20px 12px' }}
+                        >
+                          {item.type === 'feature' ? (
+                            <Text
+                              variant="body2"
+                              text={item.feature.description}
+                              style={{
+                                color: visualConfig.expandedCard.textColor,
+                                opacity: visualConfig.expandedCard.descriptionOpacity,
+                                lineHeight: 1.5,
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <Text
+                                variant="body2"
+                                text={formatLabel(labels.displayedIn, { product: hero.name, variant: selectedVariant?.label })}
+                                style={{
+                                  color: visualConfig.expandedCard.textColor,
+                                  opacity: visualConfig.expandedCard.descriptionOpacity,
+                                  lineHeight: 1.5,
+                                  marginBottom: 12,
+                                }}
+                              />
+                              <ColorSelector
+                                hideLabel
+                                colors={variants.map((v) => ({ id: v.id, name: v.label, value: v.colorHex }))}
+                                selectedColorId={selectedVariantId}
+                                onColorChange={onVariantChange}
+                                maxVisible={100}
+                                groupLabel={labels.colorOptions}
+                                swatchLabel={labels.selectColor}
+                                unavailableLabel={labels.unavailable}
+                              />
+                            </>
+                          )}
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )
             })}
-          </Box>
-        </Box>
-      </Box>
+          </div>
+        </div>
+      </div>
     )
   }
 )

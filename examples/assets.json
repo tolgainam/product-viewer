@@ -1,0 +1,98 @@
+{
+  "$comment": "Every demo asset, where it comes from and under which licence. scripts/fetch-demo-assets.mjs downloads and derives the files under examples/media from this list. See examples/CREDITS.md. Nothing shows a brand name or logo. The colour variants are the same CC0 render recoloured (tint), so one product appears in four paints.",
+  "images": [
+    {
+      "id": "backgrounds/plaster",
+      "title": "A smooth grey concrete wall with subtle trowel marks",
+      "author": "Hydra 4x",
+      "source": "https://unsplash.com/photos/OL2tYVcApI4",
+      "license": "Unsplash License",
+      "download": "https://unsplash.com/photos/OL2tYVcApI4/download?force=true&w=2400",
+      "fit": "wide"
+    },
+    {
+      "id": "chairs/mustard",
+      "title": "Painted Wooden Chair 01 (rendered thumbnail, transparent, recoloured mustard)",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "download": "https://cdn.polyhaven.com/asset_img/thumbs/painted_wooden_chair_01.png?width=1600",
+      "fit": "tint",
+      "tint": "#d0a12d"
+    },
+    {
+      "id": "chairs/sage",
+      "title": "Painted Wooden Chair 01 (rendered thumbnail, transparent, recoloured sage)",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "download": "https://cdn.polyhaven.com/asset_img/thumbs/painted_wooden_chair_01.png?width=1600",
+      "fit": "tint",
+      "tint": "#7fa86a"
+    },
+    {
+      "id": "chairs/blush",
+      "title": "Painted Wooden Chair 01 (rendered thumbnail, transparent, recoloured blush)",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "download": "https://cdn.polyhaven.com/asset_img/thumbs/painted_wooden_chair_01.png?width=1600",
+      "fit": "tint",
+      "tint": "#e59cc5"
+    },
+    {
+      "id": "chairs/slate",
+      "title": "Painted Wooden Chair 01 (rendered thumbnail, transparent, recoloured slate)",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "download": "https://cdn.polyhaven.com/asset_img/thumbs/painted_wooden_chair_01.png?width=1600",
+      "fit": "tint",
+      "tint": "#4a5568"
+    },
+    {
+      "id": "overlays/chair",
+      "title": "Painted Wooden Chair 01 (rendered thumbnail, transparent)",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "download": "https://cdn.polyhaven.com/asset_img/thumbs/painted_wooden_chair_01.png?width=1600",
+      "fit": "transparent"
+    },
+    {
+      "id": "overlays/chair-side",
+      "title": "Painted Wooden Chair 01 (orthographic side render, transparent, recoloured slate)",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "download": "https://cdn.polyhaven.com/asset_img/renders/painted_wooden_chair_01/orth_side.png?width=1600",
+      "fit": "tint",
+      "tint": "#4a5568"
+    }
+  ],
+  "videos": [
+    {
+      "id": "video/shadows",
+      "title": "Plant shadows swaying in the sunlight on a golden wall",
+      "author": "Thiago José Amaral",
+      "source": "https://www.pexels.com/video/video-of-a-plant-shadow-on-the-wall-5732088/",
+      "license": "Pexels License",
+      "download": "https://videos.pexels.com/video-files/5732088/5732088-hd_1920_1080_30fps.mp4",
+      "trim": {
+        "start": 1,
+        "seconds": 10
+      }
+    }
+  ],
+  "models": [
+    {
+      "id": "painted_wooden_chair_01",
+      "title": "Painted Wooden Chair 01",
+      "author": "Poly Haven",
+      "source": "https://polyhaven.com/a/painted_wooden_chair_01",
+      "license": "CC0 1.0",
+      "polyhaven": "painted_wooden_chair_01",
+      "resolution": "1k"
+    }
+  ]
+}

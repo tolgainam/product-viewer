@@ -25,15 +25,7 @@ import { join, resolve } from 'node:path'
 const packageRoot = resolve(import.meta.dirname, '..')
 const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: 'pipe' })
 
-const BASE_PEERS = [
-  'react',
-  'react-dom',
-  '@mui/material',
-  '@mui/icons-material',
-  '@emotion/react',
-  '@emotion/styled',
-  'framer-motion',
-]
+const BASE_PEERS = ['react', 'react-dom', 'framer-motion']
 const THREE_PEERS = ['three', '@react-three/fiber', '@react-three/drei']
 
 const APP_2D = `import { createRoot } from 'react-dom/client'
@@ -69,7 +61,7 @@ function buildScenario({ name, tarball, extraPeers, app, expectThreeChunk }) {
 
     writeFileSync(join(dir, 'index.html'), INDEX_HTML)
     writeFileSync(join(dir, 'main.jsx'), app)
-    const output = run('npx', ['--yes', 'vite', 'build', '--logLevel', 'warn'], dir)
+    const output = run('npx', ['--yes', 'vite@5', 'build', '--logLevel', 'warn'], dir)
 
     const chunks = readdirSync(join(dir, 'dist', 'assets'))
     const hasModelChunk = chunks.some((f) => f.includes('ModelScene'))

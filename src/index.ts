@@ -4,15 +4,11 @@
  * @license MIT
  */
 
-export { ProductViewer } from './ProductViewer'
+export { ProductViewer, DEFAULT_BREAKPOINT } from './ProductViewer'
 
-export {
-  defaultConfig,
-  liquidGlassConfig,
-  transparentBlueConfig,
-  lightConfig,
-  dynamicBackgroundConfig,
-} from './ProductViewerConfig'
+export { defaultConfig, liquidGlassConfig, transparentBlueConfig } from './ProductViewerConfig'
+
+export { defaultLabels } from './internal/labels'
 
 export {
   palette,
@@ -30,6 +26,10 @@ export type {
   ProductViewerHero,
   ProductViewerVariant,
   ProductViewerFeature,
+  ProductViewerFeatureBase,
+  ProductViewerMediaType,
+  ProductViewerLabels,
+  ProductViewerLayout,
   ResponsiveImage,
   ResponsiveVideo,
   ProductViewerColor,

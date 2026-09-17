@@ -1,6 +1,11 @@
 /**
  * ModelViewer — renders a 3D feature, degrading to its poster image.
  *
+ * Until the model is on screen the card shows the plain backdrop and a loading bar:
+ * never the poster, which used to flash for a frame and then get replaced by the canvas.
+ * The backdrop is painted underneath the canvas too, so a transparent first WebGL frame
+ * cannot show whatever was on the stage before.
+ *
  * Two things can go wrong and both are handled here rather than thrown at the host app:
  * the model file may fail to load, or the three.js peers may be missing from the install.
  * Either way the card shows the poster instead of breaking the page.
@@ -8,8 +13,9 @@
  * @author Tolga Inam <tolgainam@gmail.com>
  * @license MIT
  */
-import { Component, Suspense, lazy, type ReactNode } from 'react'
+import { Component, Suspense, lazy, useCallback, useState, type ReactNode } from 'react'
 import { colors } from '../palette'
+import { useViewerStyles } from './styles'
 
 const ModelScene = lazy(() => import('./ModelScene'))
 
@@ -26,8 +32,12 @@ class ModelBoundary extends Component<BoundaryProps, { failed: boolean }> {
   }
 
   componentDidCatch(error: unknown) {
+    const missingPeer =
+      error instanceof Error && /Cannot find module|Failed to (fetch|resolve)|not installed/i.test(error.message)
     console.warn(
-      '[ProductViewer] 3D model not shown. Install three, @react-three/fiber and @react-three/drei to enable model features.',
+      missingPeer
+        ? '[ProductViewer] 3D model not shown: the three.js peers are missing. Install three, @react-three/fiber and @react-three/drei.'
+        : '[ProductViewer] 3D model not shown: the model failed to load. Showing the poster instead.',
       error
     )
   }
@@ -35,6 +45,28 @@ class ModelBoundary extends Component<BoundaryProps, { failed: boolean }> {
   render() {
     return this.state.failed ? this.props.fallback : this.props.children
   }
+}
+
+/** Thin bar centred on the stage; determinate once the loader reports progress */
+function LoadingBar({ progress }: { progress: number | null }) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={progress ?? undefined}
+      aria-busy
+      style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <div className="pv-loading-track">
+        <div
+          className="pv-loading-fill"
+          data-indeterminate={progress === null}
+          style={progress === null ? undefined : { width: `${Math.max(4, Math.min(100, progress))}%` }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export interface ModelViewerProps {
@@ -47,42 +79,37 @@ export interface ModelViewerProps {
 }
 
 export function ModelViewer({ src, background, poster }: ModelViewerProps) {
-  /**
-   * While the scene loads, show the plain backdrop rather than the poster: showing the
-   * poster makes it flash for a moment and then swap to the canvas. The poster is the
-   * last resort, for when 3D is genuinely unavailable.
-   */
-  const loading = (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundColor: background || colors.background.model,
-      }}
-    />
-  )
+  useViewerStyles()
+  const backdrop = background || colors.background.model
+  const [ready, setReady] = useState(false)
+  const [progress, setProgress] = useState<number | null>(null)
+  const handleReady = useCallback(() => setReady(true), [])
+  const handleProgress = useCallback((value: number) => setProgress(value), [])
 
   const posterFallback = poster ? (
     <div
       style={{
         position: 'absolute',
         inset: 0,
-        backgroundColor: background || colors.background.model,
+        backgroundColor: backdrop,
         backgroundImage: `url("${poster}")`,
         backgroundSize: 'contain',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }}
     />
-  ) : (
-    loading
-  )
+  ) : null
 
   return (
-    <ModelBoundary fallback={posterFallback}>
-      <Suspense fallback={loading}>
-        <ModelScene src={src} background={background} />
-      </Suspense>
-    </ModelBoundary>
+    // The backdrop sits under everything: the lazy chunk, the canvas and the loading bar
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: backdrop }}>
+      {/* Keyed by src so a failure on one model does not stick to the next one shown */}
+      <ModelBoundary key={src} fallback={posterFallback}>
+        <Suspense fallback={null}>
+          <ModelScene src={src} background={backdrop} onProgress={handleProgress} onReady={handleReady} />
+        </Suspense>
+      </ModelBoundary>
+      {!ready && <LoadingBar progress={progress} />}
+    </div>
   )
 }

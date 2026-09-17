@@ -1,39 +1,20 @@
 /**
  * ColorSelector Component Types
  *
- * Type definitions for the ColorSelector component.
- *
- * DESIGN SYSTEM:
- * Based on Figma design: https://www.figma.com/design/ymvwDS0UFLQF26isVZxQ2s/GenUI-DS?node-id=67-4485
- *
- * PURPOSE:
- * Allows users to select a color from a palette of available options.
- * Used for product color variants (device colors, accessory colors).
- *
- * STATES:
- * - Idle: Normal unselected color
- * - Active: Currently selected color (with border ring)
- * - Focus: Keyboard focused color (with border ring)
- * - Unavailable: Color not available (grayed out with diagonal line)
- *
  * @author Tolga Inam <tolgainam@gmail.com>
  * @license MIT
  */
 
+import type { KeyboardEvent, Ref } from 'react'
+
 export interface ColorOption {
-  /**
-   * Unique identifier for the color
-   */
+  /** Unique identifier for the color */
   id: string
 
-  /**
-   * Display name of the color
-   */
+  /** Display name of the color */
   name: string
 
-  /**
-   * Hex color value (e.g., "#00d1d2")
-   */
+  /** Hex color value (e.g., "#00d1d2") */
   value: string
 
   /**
@@ -56,14 +37,10 @@ export interface ColorSelectorProps {
    */
   hideLabel?: boolean
 
-  /**
-   * Array of available colors
-   */
+  /** Array of available colors */
   colors: ColorOption[]
 
-  /**
-   * Currently selected color ID
-   */
+  /** Currently selected color ID */
   selectedColorId?: string
 
   /**
@@ -85,50 +62,43 @@ export interface ColorSelectorProps {
    */
   disabled?: boolean
 
-  /**
-   * Optional className for custom styling
-   */
+  /** Optional className for custom styling */
   className?: string
+
+  /** Accessible name of the swatch group */
+  groupLabel?: string
+  /** Accessible name of one swatch; `{name}` is replaced with the colour name */
+  swatchLabel?: string
+  /** Suffix for colours that cannot be selected */
+  unavailableLabel?: string
+  /** Accessible name of the previous-page button */
+  previousLabel?: string
+  /** Accessible name of the next-page button */
+  nextLabel?: string
 }
 
 export interface ColorSwatchProps {
-  /**
-   * Color option data
-   */
+  /** Color option data */
   color: ColorOption
 
-  /**
-   * Whether this swatch is selected
-   */
+  /** Whether this swatch is selected */
   selected?: boolean
 
-  /**
-   * Whether this swatch is focused
-   */
-  focused?: boolean
-
-  /**
-   * Whether selector is disabled
-   */
+  /** Whether selector is disabled */
   disabled?: boolean
 
-  /**
-   * Click handler
-   */
+  /** Roving tabindex value */
+  tabIndex?: number
+
+  /** Accessible name */
+  ariaLabel?: string
+
+  /** Click handler */
   onClick?: () => void
 
-  /**
-   * Focus handler
-   */
-  onFocus?: () => void
+  /** Keyboard handler */
+  onKeyDown?: (event: KeyboardEvent) => void
 
-  /**
-   * Blur handler
-   */
-  onBlur?: () => void
-
-  /**
-   * Keyboard handler
-   */
-  onKeyDown?: (event: React.KeyboardEvent) => void
+  /** Ref to the underlying button, for focus management */
+  swatchRef?: Ref<HTMLButtonElement>
 }

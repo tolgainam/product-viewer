@@ -11,12 +11,21 @@
  * @author Tolga Inam <tolgainam@gmail.com>
  * @license MIT
  */
+import { fileURLToPath } from 'node:url'
+
 export default {
-  root: new URL('.', import.meta.url).pathname,
-  publicDir: new URL('../examples', import.meta.url).pathname,
+  root: fileURLToPath(new URL('.', import.meta.url)),
+  publicDir: fileURLToPath(new URL('../examples', import.meta.url)),
   base: '/product-viewer/',
   build: {
-    outDir: new URL('../docs/dist', import.meta.url).pathname,
+    outDir: fileURLToPath(new URL('../docs/dist', import.meta.url)),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        demo: fileURLToPath(new URL('./demo.html', import.meta.url)),
+        devices: fileURLToPath(new URL('./devices.html', import.meta.url)),
+      },
+    },
   },
 }

@@ -7,13 +7,12 @@
  * - Static images + optional video
  * - Scroll-triggered animations (Framer Motion)
  *
- * DESIGN INSPIRATION:
- * Based on Apple's iPhone 17 Pro product viewer with expandable
- * feature cards, color selection, and media galleries.
- *
  * LAYOUT:
- * - Desktop: Two-column (gallery left, controls right)
- * - Mobile: Stacked (gallery top, controls bottom)
+ * - Desktop: stage with a floating pill stack on the left
+ * - Mobile: full-width stage with a swipeable pill strip at the bottom
+ *
+ * The layout is chosen from the component's own width (see `breakpoint`), so a viewer
+ * in a narrow column gets the mobile layout on any screen.
  *
  * USAGE:
  * ```tsx
@@ -26,25 +25,37 @@
  * @license MIT
  */
 
-import { forwardRef, useState, useCallback, useRef } from 'react'
-import { Box, useMediaQuery, useTheme } from '@mui/material'
-import { colors, getSpacingPx } from './internal/tokens'
-import { motion, useInView } from 'framer-motion'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react'
+import { motion, MotionConfig, useInView } from 'framer-motion'
 import { ProductViewerMobile } from './ProductViewerMobile'
 import { ProductViewerDesktop } from './ProductViewerDesktop'
 import { liquidGlassConfig } from './ProductViewerConfig'
+import { useElementWidth, useMediaQuery } from './internal/hooks'
+import { resolveLabels } from './internal/labels'
+import { prefetchProductImages } from './internal/media'
+import { useViewerStyles } from './internal/styles'
+import { buildViewerItems, COLOR_ITEM_INDEX } from './internal/viewer-items'
 import type { ProductViewerProps } from './ProductViewer.types'
+
+/** Width below which the mobile layout is used, unless `breakpoint` says otherwise */
+export const DEFAULT_BREAKPOINT = 1200
 
 // Scroll-triggered fade-in animation
 const fadeInVariants = {
-  hidden: { opacity: 0, y: 50 },
+  hidden: { opacity: 0, y: 40 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.6,
-      ease: 'easeOut' as const,
-    },
+    transition: { duration: 0.6, ease: 'easeOut' as const },
   },
 }
 
@@ -59,9 +70,14 @@ export const ProductViewer = forwardRef<HTMLDivElement, ProductViewerProps>(
       className,
       visualConfig: visualConfigProp,
       modelRenderer,
+      breakpoint = DEFAULT_BREAKPOINT,
+      layout = 'auto',
+      labels: labelOverrides,
     },
     ref
   ) => {
+    useViewerStyles()
+
     // ============================================================================
     // CONTENT
     // ============================================================================
@@ -72,91 +88,123 @@ export const ProductViewer = forwardRef<HTMLDivElement, ProductViewerProps>(
 
     // Use liquidGlassConfig by default if no config provided (better for product showcases)
     const visualConfig = visualConfigProp || liquidGlassConfig
+    const labels = useMemo(() => resolveLabels(labelOverrides), [labelOverrides])
+    const items = useMemo(() => buildViewerItems(variants, features), [variants, features])
 
     // ============================================================================
     // RESPONSIVE DETECTION
     // ============================================================================
 
-    const theme = useTheme()
-    // Use mobile/tablet layout for screens under 'lg' (1200px)
-    const isMobileOrTablet = useMediaQuery(theme.breakpoints.down('lg'))
+    const rootRef = useRef<HTMLDivElement>(null)
+    useImperativeHandle(ref, () => rootRef.current as HTMLDivElement, [])
+
+    // Measured on the element itself; the viewport query only covers the first paint,
+    // the server, and browsers without ResizeObserver.
+    const measuredWidth = useElementWidth(rootRef)
+    const viewportIsNarrow = useMediaQuery(`(max-width: ${breakpoint - 0.02}px)`)
+    const isMobile =
+      layout === 'mobile'
+        ? true
+        : layout === 'desktop'
+          ? false
+          : measuredWidth !== null && measuredWidth > 0
+            ? measuredWidth < breakpoint
+            : viewportIsNarrow
 
     // ============================================================================
     // STATE MANAGEMENT
     // ============================================================================
 
-    // Selected variant (defaults to first variant or provided default)
-    const [selectedVariantId, setSelectedVariantId] = useState<string>(
-      defaultVariantId || (variants.length > 0 ? variants[0].id : '')
-    )
+    // Selected variant (defaults to first variant or provided default). An id that is
+    // not in `variants` — a stale default, or content that changed — falls back to the first.
+    const [variantState, setVariantState] = useState<string>(defaultVariantId ?? variants[0]?.id ?? '')
+    const selectedVariantId = variants.some((v) => v.id === variantState) ? variantState : (variants[0]?.id ?? '')
 
-    // Expanded feature index (-1 means none expanded)
-    const [expandedFeatureIndex, setExpandedFeatureIndex] = useState<number>(
-      defaultFeatureIndex
-    )
+    // Expanded item: -1 none, -2 colour selector, 0+ a feature. Out-of-range values close.
+    const [featureState, setFeatureState] = useState<number>(defaultFeatureIndex)
+    const expandedFeatureIndex =
+      (featureState === COLOR_ITEM_INDEX && variants.length > 1) ||
+      (featureState >= 0 && featureState < features.length)
+        ? featureState
+        : -1
+
+    const activeItemIndex = items.findIndex((item) => item.index === expandedFeatureIndex)
+    const canGoPrevious = activeItemIndex > 0
+    const canGoNext = activeItemIndex >= 0 && activeItemIndex < items.length - 1
 
     // Ref for scroll animation trigger
-    const containerRef = useRef<HTMLDivElement>(null)
-    const isInView = useInView(containerRef, { once: true, margin: '-100px' })
+    const isInView = useInView(rootRef, { once: true, amount: 0.15 })
+
+    // Warm the cache with the other variants and feature media once the page is idle
+    useEffect(() => (hero ? prefetchProductImages(hero, variants, features) : undefined), [hero, variants, features])
 
     // ============================================================================
     // EVENT HANDLERS
     // ============================================================================
 
-    /**
-     * Handle variant selection change
-     */
     const handleVariantChange = useCallback(
       (variantId: string) => {
-        setSelectedVariantId(variantId)
+        setVariantState(variantId)
         onVariantChange?.(variantId)
       },
       [onVariantChange]
     )
 
-    /**
-     * Handle feature toggle (expand/collapse)
-     */
+    /** Open the item at `index`, or close it when it is already open */
     const handleFeatureToggle = useCallback(
       (index: number) => {
         const newIndex = expandedFeatureIndex === index ? -1 : index
-        setExpandedFeatureIndex(newIndex)
+        setFeatureState(newIndex)
         onFeatureToggle?.(index, newIndex === index)
       },
       [expandedFeatureIndex, onFeatureToggle]
     )
 
-    /**
-     * Navigate to previous feature
-     */
-    const handlePreviousFeature = useCallback(() => {
-      if (expandedFeatureIndex > 0) {
-        const newIndex = expandedFeatureIndex - 1
-        setExpandedFeatureIndex(newIndex)
-        onFeatureToggle?.(newIndex, true)
-      }
-    }, [expandedFeatureIndex, onFeatureToggle])
+    const openItem = useCallback(
+      (position: number) => {
+        const item = items[position]
+        if (!item) return
+        setFeatureState(item.index)
+        onFeatureToggle?.(item.index, true)
+      },
+      [items, onFeatureToggle]
+    )
 
-    /**
-     * Navigate to next feature
-     */
-    const handleNextFeature = useCallback(() => {
-      if (expandedFeatureIndex < features.length - 1) {
-        const newIndex = expandedFeatureIndex + 1
-        setExpandedFeatureIndex(newIndex)
-        onFeatureToggle?.(newIndex, true)
-      }
-    }, [expandedFeatureIndex, features.length, onFeatureToggle])
+    const handlePrevious = useCallback(() => {
+      if (canGoPrevious) openItem(activeItemIndex - 1)
+    }, [canGoPrevious, activeItemIndex, openItem])
 
-    /**
-     * Close expanded feature
-     */
+    const handleNext = useCallback(() => {
+      if (canGoNext) openItem(activeItemIndex + 1)
+    }, [canGoNext, activeItemIndex, openItem])
+
     const handleClose = useCallback(() => {
-      if (expandedFeatureIndex >= 0) {
-        onFeatureToggle?.(expandedFeatureIndex, false)
-      }
-      setExpandedFeatureIndex(-1)
+      if (expandedFeatureIndex !== -1) onFeatureToggle?.(expandedFeatureIndex, false)
+      setFeatureState(-1)
     }, [expandedFeatureIndex, onFeatureToggle])
+
+    /** Escape closes; arrow keys move between open cards. Swatches handle their own arrows. */
+    const handleKeyDown = useCallback(
+      (event: KeyboardEvent<HTMLDivElement>) => {
+        if (activeItemIndex < 0) return
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          handleClose()
+          return
+        }
+        if ((event.target as HTMLElement).closest('[role="radiogroup"]')) return
+        const previousKey = isMobile ? 'ArrowLeft' : 'ArrowUp'
+        const nextKey = isMobile ? 'ArrowRight' : 'ArrowDown'
+        if (event.key === previousKey) {
+          event.preventDefault()
+          handlePrevious()
+        } else if (event.key === nextKey) {
+          event.preventDefault()
+          handleNext()
+        }
+      },
+      [activeItemIndex, isMobile, handleClose, handlePrevious, handleNext]
+    )
 
     // ============================================================================
     // RENDER
@@ -164,73 +212,44 @@ export const ProductViewer = forwardRef<HTMLDivElement, ProductViewerProps>(
 
     if (!hero) {
       console.warn('[ProductViewer] `data.hero` is missing — rendering an empty container.')
-      return <Box ref={ref} className={className} data-product-id={data.id} />
+      return <div ref={rootRef} className={className} data-product-id={data.id} />
     }
 
-    // Mobile/Tablet Layout (Apple-style full-screen with bottom pills)
-    if (isMobileOrTablet) {
-      return (
-        <Box
-          ref={ref}
+    const layoutProps = {
+      hero,
+      variants,
+      features,
+      items,
+      selectedVariantId,
+      expandedFeatureIndex,
+      activeItemIndex,
+      canGoPrevious,
+      canGoNext,
+      onVariantChange: handleVariantChange,
+      onFeatureToggle: handleFeatureToggle,
+      onPrevious: handlePrevious,
+      onNext: handleNext,
+      onClose: handleClose,
+      visualConfig,
+      labels,
+      modelRenderer,
+    }
+
+    return (
+      <MotionConfig reducedMotion="user">
+        <div
+          ref={rootRef}
           className={className}
           data-product-id={data.id}
-          sx={{
-            width: '100%',
-            backgroundColor: colors.primary.dark,
-            overflow: 'hidden',
-          }}
+          data-layout={isMobile ? 'mobile' : 'desktop'}
+          onKeyDown={handleKeyDown}
+          style={{ position: 'relative', width: '100%' }}
         >
-          <ProductViewerMobile
-            hero={hero}
-            variants={variants}
-            features={features}
-            selectedVariantId={selectedVariantId}
-            expandedFeatureIndex={expandedFeatureIndex}
-            onVariantChange={handleVariantChange}
-            onFeatureToggle={handleFeatureToggle}
-            onPreviousFeature={handlePreviousFeature}
-            onNextFeature={handleNextFeature}
-            onClose={handleClose}
-            visualConfig={visualConfig}
-            modelRenderer={modelRenderer}
-          />
-        </Box>
-      )
-    }
-
-    // Desktop Layout (Two-column with pills)
-    return (
-      <Box
-        ref={ref}
-        className={className}
-        data-product-id={data.id}
-        sx={{
-          width: '100%',
-          backgroundColor: colors.background.default,
-          overflow: 'hidden',
-          padding: { xs: getSpacingPx(3), md: getSpacingPx(5) },
-        }}
-      >
-        <motion.div
-          ref={containerRef}
-          variants={fadeInVariants}
-          initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
-        >
-          <ProductViewerDesktop
-            hero={hero}
-            variants={variants}
-            features={features}
-            selectedVariantId={selectedVariantId}
-            expandedFeatureIndex={expandedFeatureIndex}
-            onVariantChange={handleVariantChange}
-            onFeatureToggle={handleFeatureToggle}
-            onClose={handleClose}
-            visualConfig={visualConfig}
-            modelRenderer={modelRenderer}
-          />
-        </motion.div>
-      </Box>
+          <motion.div variants={fadeInVariants} initial="hidden" animate={isInView ? 'visible' : 'hidden'}>
+            {isMobile ? <ProductViewerMobile {...layoutProps} /> : <ProductViewerDesktop {...layoutProps} />}
+          </motion.div>
+        </div>
+      </MotionConfig>
     )
   }
 )

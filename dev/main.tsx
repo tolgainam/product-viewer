@@ -1,11 +1,5 @@
-/** Local playground for manual testing — not part of the published package. */
+/** Documentation site entry — built against the real source so it cannot drift from the package. */
 import { createRoot } from 'react-dom/client'
-import { ProductViewer } from '../src'
-// 3D is opt-in: importing the model entry is what pulls in three.js
-import { ModelViewer } from '../src/model'
-import data from '../examples/example-product.json'
-import type { ProductViewerData } from '../src/ProductViewer.types'
+import { DocsApp } from './docs/DocsApp'
 
-createRoot(document.getElementById('root')!).render(
-  <ProductViewer data={data as ProductViewerData} modelRenderer={ModelViewer} />
-)
+createRoot(document.getElementById('root')!).render(<DocsApp />)

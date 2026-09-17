@@ -1,105 +1,200 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/tolgainam/genUI/packages/product-viewer/schema/product-viewer.schema.json",
+  "$id": "https://github.com/tolgainam/product-viewer/schema/product-viewer.schema.json",
   "title": "ProductViewer content",
   "description": "Content for one product rendered by @tolgainam/product-viewer. Author: Tolga Inam <tolgainam@gmail.com>. Licence: MIT.",
   "type": "object",
-  "required": ["hero", "variants", "features"],
+  "required": [
+    "hero",
+    "variants",
+    "features"
+  ],
   "additionalProperties": false,
   "properties": {
     "id": {
       "type": "string",
       "description": "Optional identifier, rendered as data-product-id."
     },
-    "hero": { "$ref": "#/$defs/hero" },
+    "hero": {
+      "$ref": "#/$defs/hero"
+    },
     "variants": {
       "type": "array",
       "description": "Selectable colour variants. May be empty.",
-      "items": { "$ref": "#/$defs/variant" }
+      "items": {
+        "$ref": "#/$defs/variant"
+      }
     },
     "features": {
       "type": "array",
       "description": "Expandable feature cards. May be empty.",
-      "items": { "$ref": "#/$defs/feature" }
+      "items": {
+        "$ref": "#/$defs/feature"
+      }
     }
   },
   "$defs": {
     "responsiveImage": {
       "type": "object",
-      "description": "One image at three widths, plus optional retina sources.",
-      "required": ["small", "medium", "large", "alt"],
+      "description": "One image at three sizes plus optional 2x sources. small: below 600px viewports (portrait stage; 9:16 for backgrounds, 1:1 for product shots and cut-outs). medium: 600 to 1199px (near-square stage; 1:1). large: 1200px and up (16:9 stage; 16:9 for backgrounds, 1:1 for product shots and cut-outs).",
+      "required": [
+        "small",
+        "medium",
+        "large",
+        "alt"
+      ],
       "additionalProperties": false,
       "properties": {
-        "small": { "type": "string", "description": "URL used on narrow viewports." },
-        "medium": { "type": "string", "description": "URL used on medium viewports." },
-        "large": { "type": "string", "description": "URL used on wide viewports." },
-        "small2x": { "type": "string" },
-        "medium2x": { "type": "string" },
-        "large2x": { "type": "string" },
-        "alt": { "type": "string", "description": "Alternative text." }
+        "small": {
+          "type": "string",
+          "description": "URL used below 600px viewports. Backgrounds 9:16 (720×1280); product shots and cut-outs 1:1 (640×640)."
+        },
+        "medium": {
+          "type": "string",
+          "description": "URL used from 600 to 1199px viewports. 1:1 (1200×1200)."
+        },
+        "large": {
+          "type": "string",
+          "description": "URL used from 1200px viewports. Backgrounds 16:9 (1920×1080); product shots and cut-outs 1:1 (1920×1920)."
+        },
+        "small2x": {
+          "type": "string"
+        },
+        "medium2x": {
+          "type": "string"
+        },
+        "large2x": {
+          "type": "string"
+        },
+        "alt": {
+          "type": "string",
+          "description": "Alternative text."
+        }
       }
     },
     "responsiveVideo": {
       "type": "object",
-      "required": ["src", "poster"],
+      "required": [
+        "src"
+      ],
       "additionalProperties": false,
       "properties": {
-        "src": { "type": "string", "description": "Video file URL." },
-        "poster": { "$ref": "#/$defs/responsiveImage" },
-        "startFrame": { "type": "string", "description": "Optional still shown before playback." },
-        "endFrame": { "type": "string", "description": "Optional still shown after playback." }
+        "src": {
+          "type": "string",
+          "description": "Video file URL."
+        },
+        "alt": {
+          "type": "string",
+          "description": "Accessible description of the video."
+        },
+        "poster": {
+          "$ref": "#/$defs/responsiveImage",
+          "description": "Deprecated: not displayed. Accepted for older content; its alt is used."
+        },
+        "startFrame": {
+          "type": "string",
+          "description": "Optional still shown before playback."
+        },
+        "endFrame": {
+          "type": "string",
+          "description": "Optional still shown after playback."
+        }
       }
     },
     "colorBackground": {
       "type": "object",
       "description": "A flat colour instead of media; the container itself carries the colour.",
-      "required": ["color"],
+      "required": [
+        "color"
+      ],
       "additionalProperties": false,
       "properties": {
-        "color": { "type": "string", "description": "Any CSS colour, e.g. #1a2e28" },
-        "alt": { "type": "string" }
+        "color": {
+          "type": "string",
+          "description": "Any CSS colour, e.g. #1a2e28"
+        },
+        "alt": {
+          "type": "string"
+        }
       }
     },
     "modelBackground": {
       "type": "object",
       "description": "A 3D model (GLB/GLTF). Needs the optional peers three, @react-three/fiber and @react-three/drei; without them the poster is shown.",
-      "required": ["src"],
+      "required": [
+        "src"
+      ],
       "additionalProperties": false,
       "properties": {
-        "src": { "type": "string", "description": "URL of the .glb / .gltf file." },
-        "poster": { "$ref": "#/$defs/responsiveImage" },
+        "src": {
+          "type": "string",
+          "description": "URL of the .glb / .gltf file."
+        },
+        "poster": {
+          "$ref": "#/$defs/responsiveImage",
+          "description": "Shown only if 3D is unavailable (missing peers or a failed load), never while loading."
+        },
         "background": {
           "type": "string",
           "description": "Backdrop behind the model; defaults to a dark grey."
         },
-        "alt": { "type": "string" }
+        "alt": {
+          "type": "string"
+        }
       }
     },
     "hero": {
       "type": "object",
-      "required": ["name", "image", "alt"],
+      "required": [
+        "name",
+        "image",
+        "alt"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "type": "string", "description": "Product name shown in the viewer." },
-        "image": { "$ref": "#/$defs/responsiveImage" },
-        "video": { "$ref": "#/$defs/responsiveVideo" },
-        "alt": { "type": "string" }
+        "name": {
+          "type": "string",
+          "description": "Product name shown in the viewer."
+        },
+        "image": {
+          "$ref": "#/$defs/responsiveImage"
+        },
+        "video": {
+          "$ref": "#/$defs/responsiveVideo"
+        },
+        "alt": {
+          "type": "string"
+        }
       }
     },
     "variant": {
       "type": "object",
-      "required": ["id", "label", "colorHex", "image"],
+      "required": [
+        "id",
+        "label",
+        "colorHex",
+        "image"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "label": { "type": "string", "description": "Colour name shown next to the swatch." },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "description": "Colour name shown next to the swatch."
+        },
         "colorHex": {
           "type": "string",
           "description": "Swatch colour.",
           "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
         },
-        "image": { "$ref": "#/$defs/responsiveImage" },
-        "ariaLabel": { "type": "string" },
+        "image": {
+          "$ref": "#/$defs/responsiveImage"
+        },
+        "ariaLabel": {
+          "type": "string"
+        },
         "backgroundColor": {
           "type": "string",
           "description": "Stage colour while this variant is selected; needs dynamicBackground in visualConfig."
@@ -108,28 +203,118 @@
     },
     "feature": {
       "type": "object",
-      "required": ["id", "label", "description", "mediaType", "media"],
+      "required": [
+        "id",
+        "label",
+        "description",
+        "mediaType",
+        "media"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "label": { "type": "string", "description": "Short text on the pill and heading of the expanded card." },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "description": "Short text on the pill and heading of the expanded card."
+        },
         "title": {
           "type": "string",
           "description": "Optional longer headline. Carried with the content but not displayed by the current layouts."
         },
-        "description": { "type": "string" },
-        "mediaType": { "enum": ["image", "video", "color", "model"] },
-        "media": {
-          "oneOf": [
-            { "$ref": "#/$defs/responsiveImage" },
-            { "$ref": "#/$defs/responsiveVideo" },
-            { "$ref": "#/$defs/colorBackground" },
-            { "$ref": "#/$defs/modelBackground" }
-          ],
-          "description": "Match mediaType: image → responsiveImage, video → responsiveVideo, color → colorBackground, model → modelBackground."
+        "description": {
+          "type": "string"
         },
-        "footnotes": { "type": "array", "items": { "type": "string" } }
-      }
+        "mediaType": {
+          "enum": [
+            "image",
+            "video",
+            "color",
+            "model"
+          ]
+        },
+        "media": {
+          "type": "object",
+          "description": "Shape depends on mediaType: image → responsiveImage, video → responsiveVideo, color → colorBackground, model → modelBackground."
+        },
+        "footnotes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "overlay": {
+          "$ref": "#/$defs/responsiveImage",
+          "description": "Image drawn on top of the background, letterboxed and centred. Applies to image and color features; a color feature without one shows the selected variant."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mediaType": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "media": {
+                "$ref": "#/$defs/responsiveImage"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mediaType": {
+                "const": "video"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "media": {
+                "$ref": "#/$defs/responsiveVideo"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mediaType": {
+                "const": "color"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "media": {
+                "$ref": "#/$defs/colorBackground"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mediaType": {
+                "const": "model"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "media": {
+                "$ref": "#/$defs/modelBackground"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

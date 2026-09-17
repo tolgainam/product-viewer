@@ -10,7 +10,7 @@
  *
  * @example Basic Usage
  * ```typescript
- * import { defaultConfig, liquidGlassConfig } from './ProductViewerConfig'
+ * import { defaultConfig, liquidGlassConfig, transparentBlueConfig } from './ProductViewerConfig'
  *
  * // Use default configuration
  * <ProductViewer visualConfig={defaultConfig} {...props} />
@@ -74,10 +74,7 @@
  * @license MIT
  */
 
-import AddIcon from '@mui/icons-material/Add'
-import CloseIcon from '@mui/icons-material/Close'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import { Plus as AddIcon, X as CloseIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from 'lucide-react'
 import type { ProductViewerVisualConfig } from './ProductViewer.types'
 
 // Re-export type for convenience
@@ -253,87 +250,5 @@ export const transparentBlueConfig: ProductViewerVisualConfig = {
     },
     glassEffect: 'frosted',
     iconColor: '#ffffff',
-  },
-}
-
-/**
- * Light Theme Configuration
- *
- * Clean light background with dark text and subtle glass effects.
- * Perfect for products that benefit from bright, airy aesthetics.
- *
- * **Visual Characteristics:**
- * - Light container background (#f5f5f5)
- * - Dark text for readability (#1a1a1a)
- * - Subtle glass pills with light transparency
- * - Minimal gradient overlay
- * - Clean, modern appearance
- *
- * @example
- * ```typescript
- * <ProductViewer visualConfig={lightConfig} {...props} />
- * ```
- */
-export const lightConfig: ProductViewerVisualConfig = {
-  pill: {
-    backgroundColor: {
-      default: 'rgba(0, 0, 0, 0.08)',
-      hover: 'rgba(0, 0, 0, 0.12)',
-      active: 'rgba(0, 0, 0, 0.15)',
-    },
-    glassEffect: 'frosted',
-    glassIntensity: 'light',
-    textColor: '#1a1a1a',
-    borderRadius: 24,
-    icons: {
-      expandIcon: AddIcon,
-      closeIcon: CloseIcon,
-      chevronLeftIcon: ChevronLeftIcon,
-      chevronRightIcon: ChevronRightIcon,
-    },
-  },
-  expandedCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    glassEffect: 'frosted',
-    glassIntensity: 'light',
-    textColor: '#1a1a1a',
-    descriptionOpacity: 0.75,
-  },
-  container: {
-    backgroundColor: '#f5f5f5',
-    overlayGradient: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, transparent 40%)',
-    dynamicBackground: false,
-  },
-  closeButton: {
-    backgroundColor: {
-      default: 'rgba(0, 0, 0, 0.1)',
-      hover: 'rgba(0, 0, 0, 0.15)',
-    },
-    glassEffect: 'frosted',
-    iconColor: '#1a1a1a',
-  },
-}
-
-/**
- * Dynamic Background Configuration
- *
- * Based on defaultConfig with dynamic background colors enabled.
- * Container background changes to match selected color variant.
- *
- * **Visual Characteristics:**
- * - Same as defaultConfig (frosted glass, medium blur)
- * - Dynamic background: changes with color selection
- * - Reverts to default when features are expanded
- *
- * @example
- * ```typescript
- * <ProductViewer visualConfig={dynamicBackgroundConfig} {...props} />
- * ```
- */
-export const dynamicBackgroundConfig: ProductViewerVisualConfig = {
-  ...liquidGlassConfig,
-  container: {
-    ...liquidGlassConfig.container,
-    dynamicBackground: true,
   },
 }

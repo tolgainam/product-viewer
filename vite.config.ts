@@ -5,7 +5,9 @@
  */
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const src = (file: string) => fileURLToPath(new URL(`src/${file}`, import.meta.url))
 
 /**
  * Peers are never bundled. three and @react-three/* are OPTIONAL peers used only by the
@@ -22,8 +24,8 @@ export default defineConfig({
       // Two entries: the main one never references three.js; importing "./model" is what
       // pulls it in, so apps without 3D features neither install nor bundle it.
       entry: {
-        index: resolve(__dirname, 'src/index.ts'),
-        model: resolve(__dirname, 'src/model.ts'),
+        index: src('index.ts'),
+        model: src('model.ts'),
       },
       formats: ['es'],
       fileName: (_format, entryName) => `${entryName}.js`,

@@ -1,9 +1,8 @@
 /**
  * Palette — the standalone design values this package ships with.
  *
- * In genUI these come from a design system that reads brand presets at runtime.
- * Here they are frozen constants so the component looks the same anywhere, with no
- * theme provider or setup. Restyle the viewer through the `visualConfig` prop, or
+ * Frozen constants, so the component looks the same anywhere with no theme provider
+ * or setup. Restyle the viewer through the `visualConfig` prop, or
  * import these values to match your own surfaces.
  *
  * @author Tolga Inam <tolgainam@gmail.com>
@@ -133,7 +132,7 @@ export const borderRadius = {
   100: 100,
 } as const
 
-/** Breakpoints matching genUI's MUI theme; the viewer switches layout below `lg` */
+/** Reference breakpoints kept for consumers; the viewer itself switches layout at `breakpoint` (1200) */
 export const muiBreakpoints = {
   xs: 0,
   sm: 599,

@@ -5,9 +5,21 @@
  * @license MIT
  */
 
-import type { ComponentType } from 'react'
+import type { ComponentType, CSSProperties } from 'react'
 import type { GlassEffectType, GlassIntensity } from './internal/glass-effects'
-import type { SvgIconComponent } from '@mui/icons-material'
+
+/** Props the viewer passes to an icon component. Any `lucide-react` icon satisfies this. */
+export interface ViewerIconProps {
+  size?: number | string
+  color?: string
+  strokeWidth?: number | string
+  className?: string
+  style?: CSSProperties
+  'aria-hidden'?: boolean
+}
+
+/** An icon component, e.g. `import { Plus } from 'lucide-react'` */
+export type ViewerIcon = ComponentType<ViewerIconProps>
 
 /** What a model renderer receives. See {@link ModelRenderer}. */
 export interface ModelRendererProps {
@@ -64,13 +76,17 @@ export interface ProductViewerVisualConfig {
     /** Icon configuration */
     icons: {
       /** Icon to show when pill is collapsed (expand action) */
-      expandIcon: SvgIconComponent
+      expandIcon: ViewerIcon
       /** Icon to show when pill is active (close action) */
-      closeIcon: SvgIconComponent
+      closeIcon: ViewerIcon
       /** Left chevron icon for left neighbor */
-      chevronLeftIcon: SvgIconComponent
+      chevronLeftIcon: ViewerIcon
       /** Right chevron icon for right neighbor */
-      chevronRightIcon: SvgIconComponent
+      chevronRightIcon: ViewerIcon
+      /** Desktop stack navigation, previous card (default: chevron up) */
+      chevronUpIcon?: ViewerIcon
+      /** Desktop stack navigation, next card (default: chevron down) */
+      chevronDownIcon?: ViewerIcon
       // Note: Icon colors are automatically derived from container (pill or expandedCard)
     }
   }
@@ -115,7 +131,16 @@ export interface ProductViewerVisualConfig {
 }
 
 /**
- * Responsive image configuration for different breakpoints
+ * One image in three sizes, one per breakpoint, plus optional 2x sources for
+ * high-density screens.
+ *
+ * - `small`: viewports below 600px. Phones hold a portrait stage: use 9:16 for
+ *   backgrounds (720×1280), 1:1 for product shots and cut-outs (640×640).
+ * - `medium`: 600 to 1199px. Tablets hold a near-square stage: 1:1 (1200×1200).
+ * - `large`: 1200px and up. The desktop stage is 16:9: 1920×1080 for backgrounds,
+ *   1:1 (1920×1920) for product shots and cut-outs.
+ *
+ * Any size may point at the same file; the ratios only decide how much is cropped.
  */
 export interface ResponsiveImage {
   small: string
@@ -128,11 +153,18 @@ export interface ResponsiveImage {
 }
 
 /**
- * Responsive video configuration
+ * Responsive video configuration.
+ *
+ * No poster is ever drawn: the stage shows its plain background until the video can
+ * play, then the video fades in. `poster` is accepted for older content and used only
+ * for its `alt` text.
  */
 export interface ResponsiveVideo {
   src: string
-  poster: ResponsiveImage
+  /** Accessible description of the video */
+  alt?: string
+  /** @deprecated Not displayed; kept so existing content validates. Its `alt` is used. */
+  poster?: ResponsiveImage
   startFrame?: string
   endFrame?: string
 }
@@ -170,17 +202,15 @@ export interface ProductViewerColor {
 export interface ProductViewerModel {
   /** URL of the .glb / .gltf file */
   src: string
-  /** Shown while the model loads, and if the 3D libraries are not installed */
+  /** Shown only if the 3D libraries are not installed or the model fails to load; never while loading */
   poster?: ResponsiveImage
   /** Backdrop behind the model; defaults to a dark grey that suits most products */
   background?: string
   alt?: string
 }
 
-/**
- * Expandable feature card configuration
- */
-export interface ProductViewerFeature {
+/** Fields shared by every feature, whatever its background */
+export interface ProductViewerFeatureBase {
   id: string
   /** Short text on the pill, and the heading of the expanded card */
   label: string
@@ -190,11 +220,27 @@ export interface ProductViewerFeature {
    */
   title?: string
   description: string
-  /** Which kind of background this feature shows */
-  mediaType: 'image' | 'video' | 'color' | 'model'
-  media: ResponsiveImage | ResponsiveVideo | ProductViewerColor | ProductViewerModel
   footnotes?: string[]
+  /**
+   * An image drawn on top of the background, letterboxed and centred, like a product
+   * cut-out over a backdrop. Applies to `image` and `color` features. A `color` feature
+   * without an overlay shows the selected variant's picture.
+   */
+  overlay?: ResponsiveImage
 }
+
+/**
+ * Expandable feature card configuration.
+ *
+ * A discriminated union on `mediaType`, so narrowing on it also narrows `media`.
+ */
+export type ProductViewerFeature =
+  | (ProductViewerFeatureBase & { mediaType: 'image'; media: ResponsiveImage })
+  | (ProductViewerFeatureBase & { mediaType: 'video'; media: ResponsiveVideo })
+  | (ProductViewerFeatureBase & { mediaType: 'color'; media: ProductViewerColor })
+  | (ProductViewerFeatureBase & { mediaType: 'model'; media: ProductViewerModel })
+
+export type ProductViewerMediaType = ProductViewerFeature['mediaType']
 
 /**
  * Hero/initial display configuration
@@ -229,6 +275,32 @@ export interface ProductViewerData {
 }
 
 /**
+ * Every user-facing string the viewer renders. Override any of them through the
+ * `labels` prop, e.g. for translation. Placeholders in braces are substituted.
+ */
+export interface ProductViewerLabels {
+  /** Text on the colour pill */
+  color: string
+  /** Caption in the open colour card. Placeholders: `{product}`, `{variant}` */
+  displayedIn: string
+  /** Accessible name of the close button */
+  close: string
+  /** Accessible name of the previous-card control */
+  previous: string
+  /** Accessible name of the next-card control */
+  next: string
+  /** Accessible name of the swatch group */
+  colorOptions: string
+  /** Accessible name of one swatch. Placeholder: `{name}` */
+  selectColor: string
+  /** Appended to a swatch's name when the colour cannot be chosen */
+  unavailable: string
+}
+
+/** Which layout to render; `auto` measures the component's own width */
+export type ProductViewerLayout = 'auto' | 'desktop' | 'mobile'
+
+/**
  * ProductViewer main component props
  */
 export interface ProductViewerProps {
@@ -252,4 +324,15 @@ export interface ProductViewerProps {
    * Without it a model feature shows its `poster`.
    */
   modelRenderer?: ModelRenderer
+  /**
+   * Width, in pixels, below which the mobile layout is used. Measured on the viewer's own
+   * element, so a viewer in a narrow column gets the mobile layout on any screen.
+   * Before the first measurement (and on the server) the viewport width is used instead.
+   * @default 1200
+   */
+  breakpoint?: number
+  /** Force a layout instead of choosing by width. @default 'auto' */
+  layout?: ProductViewerLayout
+  /** Override any rendered string, e.g. for translation */
+  labels?: Partial<ProductViewerLabels>
 }

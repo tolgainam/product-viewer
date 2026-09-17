@@ -39,3 +39,20 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList
 }
+
+/**
+ * jsdom never loads images, so an <img> would never fire `load` and the stage's
+ * load-gated crossfade would wait forever. Fire it on the next tick instead, which
+ * also exercises the gating path the way a browser with a warm cache does.
+ */
+const imgProto = window.HTMLImageElement.prototype
+const srcDescriptor = Object.getOwnPropertyDescriptor(imgProto, 'src')
+if (srcDescriptor?.set) {
+  Object.defineProperty(imgProto, 'src', {
+    ...srcDescriptor,
+    set(this: HTMLImageElement, value: string) {
+      srcDescriptor.set!.call(this, value)
+      setTimeout(() => this.dispatchEvent(new window.Event('load')), 0)
+    },
+  })
+}

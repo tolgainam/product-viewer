@@ -1,70 +1,25 @@
 /**
  * ColorSelector Component
  *
- * PURPOSE:
- * Interactive color picker for selecting product color variants.
- * Displays a horizontal row of color swatches with optional navigation.
- *
- * DESIGN SYSTEM:
- * Based on Figma design: https://www.figma.com/design/ymvwDS0UFLQF26isVZxQ2s/GenUI-DS?node-id=67-4485
- * - Label: Body1 typography (16px), primary color
- * - Swatch size: 32px outer circle
- * - Inner color circle: 24px
- * - Border: 1.5px solid (selection ring)
- * - Gap: 2px between swatches
- * - Navigation buttons: 32px circles with chevron icons
+ * Interactive colour picker for product variants: a row of swatches with the
+ * semantics of a radio group (one choice, arrow keys move between options).
  *
  * BEHAVIOR:
- * - Click swatch to select color
- * - Unavailable colors show with diagonal line but cannot be selected
- * - Navigation buttons appear after 5th color (default maxVisible = 5)
- * - Keyboard navigation supported (arrow keys)
- * - Selected color shows border ring
- *
- * STATES:
- * - Idle: Normal unselected state
- * - Active: Selected with border ring
- * - Focus: Keyboard focused with border ring
- * - Unavailable: Shows actual color with diagonal line, slightly dimmed, not clickable
- * - Disabled: All swatches disabled
- *
- * USAGE EXAMPLES:
- * ```tsx
- * // Basic usage
- * <ColorSelector
- *   colors={[
- *     { id: '1', name: 'Teal', value: '#00d1d2' },
- *     { id: '2', name: 'Navy', value: '#1a3b5c' }
- *   ]}
- *   selectedColorId="1"
- *   onColorChange={(id) => console.log(id)}
- * />
- *
- * // With unavailable colors
- * <ColorSelector
- *   colors={[
- *     { id: '1', name: 'Teal', value: '#00d1d2' },
- *     { id: '2', name: 'Navy', value: '#1a3b5c', available: false }
- *   ]}
- * />
- * ```
+ * - Click a swatch to select it
+ * - Unavailable colours show a diagonal line and cannot be selected
+ * - Navigation buttons appear when there are more colours than `maxVisible`
+ * - Arrow keys, Home and End move between swatches
  *
  * @author Tolga Inam <tolgainam@gmail.com>
  * @license MIT
  */
 
-// React imports
-import { forwardRef, useState, useRef } from 'react'
-// MUI component imports
-import { Box, IconButton } from '@mui/material'
-// MUI icon imports
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-// Custom component imports
+import { forwardRef, useState, useRef, type KeyboardEvent } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Text } from './Text'
-// Design token imports
-import { colors as tokenColors, spacing, borderRadius, getSpacingPx } from './tokens'
-// Type imports
+import { colors as tokenColors, spacing } from './tokens'
+import { formatLabel } from './media'
+import { cx, useViewerStyles } from './styles'
 import type { ColorSelectorProps, ColorSwatchProps } from './ColorSelector.types'
 
 /**
@@ -74,92 +29,73 @@ import type { ColorSelectorProps, ColorSwatchProps } from './ColorSelector.types
 function ColorSwatch({
   color,
   selected = false,
-  focused = false,
   disabled = false,
+  tabIndex,
+  ariaLabel,
   onClick,
-  onFocus,
-  onBlur,
   onKeyDown,
+  swatchRef,
 }: ColorSwatchProps) {
   const isUnavailable = color.available === false
   const isDisabled = disabled || isUnavailable
 
   return (
-    <Box
-      component="button"
+    <button
+      type="button"
+      role="radio"
+      ref={swatchRef}
+      className={cx('pv-reset', 'pv-btn', 'pv-swatch')}
       onClick={() => !isDisabled && onClick?.()}
-      onFocus={onFocus}
-      onBlur={onBlur}
       onKeyDown={onKeyDown}
       disabled={isDisabled}
-      aria-label={`Select ${color.name} color${isUnavailable ? ' (unavailable)' : ''}`}
-      aria-pressed={selected}
-      sx={{
-        position: 'relative',
-        width: 32,
-        height: 32,
-        borderRadius: `${borderRadius[100]}px`,
-        border: 'none',
-        padding: 0,
-        cursor: isDisabled ? 'not-allowed' : 'pointer',
-        backgroundColor: 'transparent',
-        overflow: 'hidden',
-        // Selection/focus ring
-        ...(selected || focused
-          ? {
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                inset: 0,
-                borderRadius: `${borderRadius[100]}px`,
-                border: '1.5px solid',
-                borderColor: tokenColors.border.focus, // #00476e
-                pointerEvents: 'none',
-              },
-            }
-          : {}),
-        '&:hover:not(:disabled)': {
-          opacity: 0.8,
-        },
-        '&:focus-visible': {
-          outline: 'none',
-        },
-      }}
+      tabIndex={tabIndex}
+      aria-label={ariaLabel}
+      aria-checked={selected}
     >
       {/* Inner color circle */}
-      <Box
-        sx={{
+      <span
+        style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           width: 24,
           height: 24,
-          borderRadius: `${borderRadius[100]}px`,
+          borderRadius: 100,
           backgroundColor: color.value, // Always show actual color
-          border: '1.5px solid',
-          borderColor: tokenColors.neutral[30], // #c3c5c6
+          border: `1.5px solid ${tokenColors.neutral[30]}`,
           opacity: isUnavailable ? 0.6 : 1, // Slightly dim unavailable colors
+          boxSizing: 'border-box',
         }}
       >
         {/* Unavailable diagonal line */}
         {isUnavailable && (
-          <Box
-            sx={{
+          <span
+            style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%) rotate(-45deg)',
               width: 20,
               height: 1.5,
-              backgroundColor: tokenColors.primary.dark, // Dark line for better visibility
+              backgroundColor: tokenColors.primary.dark,
             }}
           />
         )}
-      </Box>
-    </Box>
+      </span>
+    </button>
   )
 }
+
+const navButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  borderRadius: 100,
+  backgroundColor: 'rgba(127, 127, 127, 0.2)',
+} as const
 
 export const ColorSelector = forwardRef<HTMLDivElement, ColorSelectorProps>(
   (
@@ -172,15 +108,16 @@ export const ColorSelector = forwardRef<HTMLDivElement, ColorSelectorProps>(
       maxVisible = 5,
       disabled = false,
       className,
+      groupLabel = 'Color options',
+      swatchLabel = 'Select {name}',
+      unavailableLabel = 'unavailable',
+      previousLabel = 'Previous colors',
+      nextLabel = 'Next colors',
     },
     ref
   ) => {
-    // ============================================================================
-    // STATE MANAGEMENT
-    // ============================================================================
-
+    useViewerStyles()
     const [startIndex, setStartIndex] = useState(0)
-    const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
     const swatchRefs = useRef<(HTMLButtonElement | null)[]>([])
 
     // Calculate visible colors
@@ -193,52 +130,37 @@ export const ColorSelector = forwardRef<HTMLDivElement, ColorSelectorProps>(
     const selectedColor = colors.find((color) => color.id === selectedColorId)
     const displayLabel = selectedColor ? `${label}: ${selectedColor.name}` : label
 
-    // ============================================================================
-    // EVENT HANDLERS
-    // ============================================================================
+    // Roving tabindex: only one swatch is in the tab order, arrows move between the rest
+    const selectedVisibleIndex = visibleColors.findIndex((c) => c.id === selectedColorId)
+    const tabbableIndex = selectedVisibleIndex >= 0 ? selectedVisibleIndex : 0
 
-    /**
-     * Handle color selection
-     */
     const handleColorClick = (colorId: string) => {
       if (disabled) return
       onColorChange?.(colorId)
     }
 
-    /**
-     * Handle previous button click
-     */
     const handlePrevious = () => {
-      if (canNavigateLeft) {
-        setStartIndex((prev) => Math.max(0, prev - 1))
-      }
+      if (canNavigateLeft) setStartIndex((prev) => Math.max(0, prev - 1))
     }
 
-    /**
-     * Handle next button click
-     */
     const handleNext = () => {
-      if (canNavigateRight) {
-        setStartIndex((prev) => Math.min(colors.length - maxVisible, prev + 1))
-      }
+      if (canNavigateRight) setStartIndex((prev) => Math.min(colors.length - maxVisible, prev + 1))
     }
 
-    /**
-     * Handle keyboard navigation
-     */
-    const handleKeyDown = (event: React.KeyboardEvent, index: number) => {
+    const handleKeyDown = (event: KeyboardEvent, index: number) => {
       if (disabled) return
 
       let newIndex = index
-
       switch (event.key) {
         case 'ArrowLeft':
+        case 'ArrowUp':
           event.preventDefault()
-          newIndex = index > 0 ? index - 1 : index
+          newIndex = index > 0 ? index - 1 : visibleColors.length - 1
           break
         case 'ArrowRight':
+        case 'ArrowDown':
           event.preventDefault()
-          newIndex = index < visibleColors.length - 1 ? index + 1 : index
+          newIndex = index < visibleColors.length - 1 ? index + 1 : 0
           break
         case 'Home':
           event.preventDefault()
@@ -253,107 +175,78 @@ export const ColorSelector = forwardRef<HTMLDivElement, ColorSelectorProps>(
           event.preventDefault()
           handleColorClick(visibleColors[index].id)
           return
+        default:
+          return
       }
 
-      if (newIndex !== index && swatchRefs.current[newIndex]) {
+      if (newIndex !== index) {
         swatchRefs.current[newIndex]?.focus()
+        // Radio groups select on arrow movement
+        const next = visibleColors[newIndex]
+        if (next && next.available !== false) handleColorClick(next.id)
       }
     }
 
-    // ============================================================================
-    // RENDER
-    // ============================================================================
-
     return (
-      <Box ref={ref} className={className} sx={{ width: 'fit-content' }}>
+      <div ref={ref} className={className} style={{ width: 'fit-content' }}>
         {/* Label with selected color name */}
         {!hideLabel && (
-          <Box sx={{ marginBottom: `${spacing[2]}px` }}>
+          <div style={{ marginBottom: spacing[2] }}>
             <Text variant="body1" text={displayLabel} />
-          </Box>
+          </div>
         )}
 
         {/* Color selector row */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: getSpacingPx(1),
-          }}
-        >
-          {/* Previous button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing[1] }}>
           {hasMore && (
-            <IconButton
+            <button
+              type="button"
+              className={cx('pv-reset', 'pv-btn')}
               onClick={handlePrevious}
               disabled={!canNavigateLeft || disabled}
-              aria-label="Previous colors"
-              sx={{
-                width: 32,
-                height: 32,
-                padding: 0,
-                backgroundColor: tokenColors.neutral[5],
-                '&:hover': {
-                  opacity: 0.8,
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: tokenColors.neutral[5],
-                  opacity: 0.5,
-                },
-              }}
+              aria-label={previousLabel}
+              style={{ ...navButtonStyle, opacity: !canNavigateLeft || disabled ? 0.4 : 1 }}
             >
-              <ChevronLeftIcon sx={{ fontSize: 16 }} />
-            </IconButton>
+              <ChevronLeft size={16} aria-hidden />
+            </button>
           )}
 
-          {/* Color swatches */}
-          <Box
-            sx={{
-              display: 'flex',
-              gap: getSpacingPx(1),
-            }}
-            role="group"
-            aria-label="Color options"
-          >
-            {visibleColors.map((color, index) => (
-              <ColorSwatch
-                key={color.id}
-                color={color}
-                selected={color.id === selectedColorId}
-                focused={focusedIndex === index}
-                disabled={disabled}
-                onClick={() => handleColorClick(color.id)}
-                onFocus={() => setFocusedIndex(index)}
-                onBlur={() => setFocusedIndex(null)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-              />
-            ))}
-          </Box>
+          <div style={{ display: 'flex', gap: spacing[1] }} role="radiogroup" aria-label={groupLabel}>
+            {visibleColors.map((color, index) => {
+              const unavailable = color.available === false
+              const name = formatLabel(swatchLabel, { name: color.name })
+              return (
+                <ColorSwatch
+                  key={color.id}
+                  color={color}
+                  selected={color.id === selectedColorId}
+                  disabled={disabled}
+                  tabIndex={index === tabbableIndex ? 0 : -1}
+                  ariaLabel={unavailable ? `${name} (${unavailableLabel})` : name}
+                  swatchRef={(el) => {
+                    swatchRefs.current[index] = el
+                  }}
+                  onClick={() => handleColorClick(color.id)}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                />
+              )
+            })}
+          </div>
 
-          {/* Next button */}
           {hasMore && (
-            <IconButton
+            <button
+              type="button"
+              className={cx('pv-reset', 'pv-btn')}
               onClick={handleNext}
               disabled={!canNavigateRight || disabled}
-              aria-label="Next colors"
-              sx={{
-                width: 32,
-                height: 32,
-                padding: 0,
-                backgroundColor: tokenColors.neutral[5],
-                '&:hover': {
-                  opacity: 0.8,
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: tokenColors.neutral[5],
-                  opacity: 0.5,
-                },
-              }}
+              aria-label={nextLabel}
+              style={{ ...navButtonStyle, opacity: !canNavigateRight || disabled ? 0.4 : 1 }}
             >
-              <ChevronRightIcon sx={{ fontSize: 16 }} />
-            </IconButton>
+              <ChevronRight size={16} aria-hidden />
+            </button>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
     )
   }
 )

@@ -4,9 +4,14 @@
 # npm pack produces, and a stable product-viewer.tgz so that
 # /releases/latest/download/product-viewer.tgz keeps working across version bumps.
 #
-# Everything is verified before the tarball is published — including
-# verify:consumer, which builds a real consumer app twice (2D-only, then with 3D),
-# the one check that catches a broken optional-peer setup.
+# Everything is verified before anything is published — including verify:consumer,
+# which builds a real consumer app twice (2D-only, then with 3D), the one check that
+# catches a broken optional-peer setup.
+#
+# npm publishing is opt-in: set the repository variable PUBLISH_TO_NPM to "true" once
+# the package exists on npm and this workflow is registered as its trusted publisher
+# (npmjs.com → package → Settings → Trusted publishing). It authenticates with OIDC,
+# so there is no token to store, and every version gets a provenance attestation.
 name: Release
 
 on:
@@ -16,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -27,6 +33,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          registry-url: https://registry.npmjs.org
 
       - run: npm ci
 
@@ -46,7 +53,28 @@ jobs:
           cp release/tolgainam-product-viewer-*.tgz release/product-viewer.tgz
           ls -la release
 
-      - name: Publish release
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" release/*.tgz --generate-notes --title "$GITHUB_REF_NAME"
+
+      # Trusted publishing needs npm 11.5+; Node 22 ships an older npm.
+      - name: Update npm for trusted publishing
+        if: vars.PUBLISH_TO_NPM == 'true' && startsWith(github.ref, 'refs/tags/v')
+        run: npm install -g npm@latest
+
+      - name: Publish to npm
+        if: vars.PUBLISH_TO_NPM == 'true' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION" >&2
+            exit 1
+          fi
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION is already on npm, skipping"
+          else
+            npm publish release/product-viewer.tgz --provenance --access public
+          fi

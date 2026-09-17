@@ -1,123 +1,127 @@
 {
   "id": "example-product",
   "hero": {
-    "name": "Aperture One",
-    "alt": "Aperture One",
+    "name": "Loft Chair",
+    "alt": "Loft Chair",
     "image": {
-      "small": "/media/devices/forest.webp",
-      "medium": "/media/devices/forest.webp",
-      "large": "/media/devices/forest.webp",
-      "alt": "Aperture One in Forest"
+      "small": "/media/chairs/mustard-640.webp",
+      "medium": "/media/chairs/mustard-1200.webp",
+      "large": "/media/chairs/mustard-1920.webp",
+      "alt": "Loft Chair in Mustard"
     }
   },
   "variants": [
     {
-      "id": "forest",
-      "label": "Forest",
-      "colorHex": "#2D5A4A",
-      "backgroundColor": "#1a2e28",
+      "id": "mustard",
+      "label": "Mustard",
+      "colorHex": "#d0a12d",
+      "backgroundColor": "#f4e7c4",
       "image": {
-        "small": "/media/devices/forest.webp",
-        "medium": "/media/devices/forest.webp",
-        "large": "/media/devices/forest.webp",
-        "alt": "Aperture One in Forest"
+        "small": "/media/chairs/mustard-640.webp",
+        "medium": "/media/chairs/mustard-1200.webp",
+        "large": "/media/chairs/mustard-1920.webp",
+        "alt": "Loft Chair in Mustard"
       }
     },
     {
-      "id": "glacier",
-      "label": "Glacier",
-      "colorHex": "#b4dfe0",
-      "backgroundColor": "#243642",
+      "id": "sage",
+      "label": "Sage",
+      "colorHex": "#7fa86a",
+      "backgroundColor": "#e2ecdb",
       "image": {
-        "small": "/media/devices/glacier.webp",
-        "medium": "/media/devices/glacier.webp",
-        "large": "/media/devices/glacier.webp",
-        "alt": "Aperture One in Glacier"
+        "small": "/media/chairs/sage-640.webp",
+        "medium": "/media/chairs/sage-1200.webp",
+        "large": "/media/chairs/sage-1920.webp",
+        "alt": "Loft Chair in Sage"
       }
     },
     {
-      "id": "ember",
-      "label": "Ember",
-      "colorHex": "#785165",
-      "backgroundColor": "#2e1a22",
+      "id": "blush",
+      "label": "Blush",
+      "colorHex": "#e59cc5",
+      "backgroundColor": "#f9e4ef",
       "image": {
-        "small": "/media/devices/ember.webp",
-        "medium": "/media/devices/ember.webp",
-        "large": "/media/devices/ember.webp",
-        "alt": "Aperture One in Ember"
+        "small": "/media/chairs/blush-640.webp",
+        "medium": "/media/chairs/blush-1200.webp",
+        "large": "/media/chairs/blush-1920.webp",
+        "alt": "Loft Chair in Blush"
       }
     },
     {
-      "id": "graphite",
-      "label": "Graphite",
-      "colorHex": "#7f8592",
-      "backgroundColor": "#1c1f21",
+      "id": "slate",
+      "label": "Slate",
+      "colorHex": "#4a5568",
+      "backgroundColor": "#dfe3ea",
       "image": {
-        "small": "/media/devices/graphite.webp",
-        "medium": "/media/devices/graphite.webp",
-        "large": "/media/devices/graphite.webp",
-        "alt": "Aperture One in Graphite"
+        "small": "/media/chairs/slate-640.webp",
+        "medium": "/media/chairs/slate-1200.webp",
+        "large": "/media/chairs/slate-1920.webp",
+        "alt": "Loft Chair in Slate"
       }
     }
   ],
   "features": [
     {
-      "id": "optics",
-      "label": "Optics",
-      "title": "SIX-ELEMENT ASSEMBLY",
-      "description": "A six-element lens stack, aligned to within a few microns. This card shows an image background.",
-      "mediaType": "image",
-      "media": {
-        "small": "/media/features/optics.webp",
-        "medium": "/media/features/optics.webp",
-        "large": "/media/features/optics.webp",
-        "alt": "Concentric rings representing the lens assembly"
-      }
-    },
-    {
-      "id": "battery",
-      "label": "Battery",
-      "title": "THREE-DAY CELL",
-      "description": "Three days of typical use, or a full charge in forty minutes. This card shows a plain colour background — no asset required.",
+      "id": "finish",
+      "label": "Finish",
+      "title": "CHALK PAINT",
+      "description": "Water-based paint over solid beech, sealed by hand. This card sets a solid stage colour with a cut-out on top.",
       "mediaType": "color",
       "media": {
-        "color": "#1a2e28",
-        "alt": "Flat colour background"
-      }
-    },
-    {
-      "id": "motion",
-      "label": "Motion",
-      "title": "CONTINUOUS STABILISATION",
-      "description": "Movement is sampled a hundred times a second. This card shows a video background.",
-      "mediaType": "video",
-      "media": {
-        "src": "/media/video/motion.mp4",
-        "poster": {
-          "small": "/media/features/motion.webp",
-          "medium": "/media/features/motion.webp",
-          "large": "/media/features/motion.webp",
-          "alt": "Motion stabilisation"
-        }
+        "color": "#1c1f22",
+        "alt": "Graphite stage"
+      },
+      "overlay": {
+        "small": "/media/overlays/chair-640.webp",
+        "medium": "/media/overlays/chair-1200.webp",
+        "large": "/media/overlays/chair-1920.webp",
+        "alt": "Loft Chair cut-out"
       }
     },
     {
       "id": "materials",
       "label": "Materials",
-      "title": "MACHINED UNIBODY",
-      "description": "A machined aluminium shell with an anodised matte finish. This card shows a 3D model; it falls back to the poster image when the optional three.js peers are not installed.",
+      "title": "SOLID BEECH",
+      "description": "Solid beech, mortise-and-tenon joints, no metal. This card layers a cut-out over a background photograph.",
+      "mediaType": "image",
+      "media": {
+        "small": "/media/backgrounds/plaster-640.webp",
+        "medium": "/media/backgrounds/plaster-1200.webp",
+        "large": "/media/backgrounds/plaster-1920.webp",
+        "alt": "Smooth grey plaster wall"
+      },
+      "overlay": {
+        "small": "/media/overlays/chair-side-640.webp",
+        "medium": "/media/overlays/chair-side-1200.webp",
+        "large": "/media/overlays/chair-side-1920.webp",
+        "alt": "Loft Chair, side view"
+      }
+    },
+    {
+      "id": "light",
+      "label": "Light",
+      "title": "MADE FOR AFTERNOONS",
+      "description": "Built for the corner where the light comes in. This card plays a looping video background.",
+      "mediaType": "video",
+      "media": {
+        "src": "/media/video/shadows.mp4",
+        "alt": "Plant shadows moving on a sunlit wall"
+      }
+    },
+    {
+      "id": "build",
+      "label": "Build",
+      "title": "TURN IT AROUND",
+      "description": "Every seam and joint modelled in three dimensions. This card shows a 3D model you can drag to rotate.",
       "mediaType": "model",
       "media": {
-        "src": "/example.glb",
-        "poster": {
-          "small": "/media/features/materials.webp",
-          "medium": "/media/features/materials.webp",
-          "large": "/media/features/materials.webp",
-          "alt": "Machined unibody"
-        },
-        "alt": "Aperture One 3D model"
+        "src": "/media/painted_wooden_chair_01.glb",
+        "background": "#1c1f22",
+        "alt": "Loft Chair 3D model"
       },
-      "footnotes": ["Anodised aluminium shell", "Scratch-resistant coating"]
+      "footnotes": [
+        "Model by Poly Haven, CC0"
+      ]
     }
   ]
 }

@@ -6,13 +6,8 @@
 name: Demo
 
 on:
-  # Manual-only on purpose while the repository is private.
-  #
-  # GitHub serves Pages publicly even from a private repo (the Pages API returns
-  # "public": true), so a push-triggered deploy would put the demo on the open
-  # internet before it is ready. Restore the push trigger when going public:
-  #   push:
-  #     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
