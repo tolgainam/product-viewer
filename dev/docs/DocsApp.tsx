@@ -7,12 +7,10 @@
 import { useState } from 'react'
 import { ProductViewer, defaultLabels } from '../../src'
 import { ModelViewer } from '../../src/model'
-import type { ProductViewerData, ProductViewerVisualConfig } from '../../src'
-import example from '../../examples/example-product.json'
+import type { ProductViewerVisualConfig } from '../../src'
+import { data } from '../data'
 import { Code } from './Code'
 import { ConfigEditor, PRESETS } from './ConfigEditor'
-
-const data = example as ProductViewerData
 const pkg = '@tolgainam/product-viewer'
 
 const SECTIONS = [

@@ -21,6 +21,12 @@ export default {
     outDir: fileURLToPath(new URL('../docs/dist', import.meta.url)),
     emptyOutDir: true,
     rollupOptions: {
+      // framer-motion and lucide ship "use client" directives meant for React Server
+      // Components; Rollup drops them in a client bundle, which is fine and not worth a line each
+      onwarn(warning, warn) {
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return
+        warn(warning)
+      },
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
         demo: fileURLToPath(new URL('./demo.html', import.meta.url)),
