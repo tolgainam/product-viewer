@@ -32,9 +32,15 @@
   ],
   "keywords": [
     "react",
+    "react-component",
     "product-viewer",
     "product-page",
+    "ecommerce",
     "framer-motion",
+    "3d",
+    "gltf",
+    "threejs",
+    "apple",
     "component"
   ],
   "homepage": "https://tolgainam.github.io/product-viewer",
