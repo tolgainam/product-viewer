@@ -46,8 +46,7 @@
     "url": "https://github.com/tolgainam/product-viewer/issues"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "engines": {
     "node": ">=18"
